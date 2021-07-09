@@ -1,9 +1,9 @@
 /*
- * types.h
+ * panic.c
  *
- * Copyright (C) 2002 Simon Nieuviarts
+ * Copyright (C) 2003 Simon Nieuviarts
  *
- * System types.
+ * When kernel does not know what to do more clever.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,19 +19,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef __IA32_TYPES_H__
-#define __IA32_TYPES_H__
 
-#ifndef __SIZE_TYPE__
-#error __SIZE_TYPE__ not defined
-#endif
+#include "stdio.h"
+#include "stdarg.h"
 
-typedef __SIZE_TYPE__ size_t;
+void __attribute__((noreturn)) panic(const char *fmt, ...)
+{
+	va_list ap;
 
-#ifndef __PTRDIFF_TYPE__
-#error __PTRDIFF_TYPE__ not defined
-#endif
-
-typedef __PTRDIFF_TYPE__ ptrdiff_t;
-
-#endif
+	printf("PANIC: ");
+	va_start(ap, fmt);
+	vprintf(fmt, ap);
+	va_end(ap);
+	//FIXME: trap *(char *)0 = 1;
+	while (1);
+}

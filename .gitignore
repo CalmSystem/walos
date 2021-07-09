@@ -4,3 +4,5 @@
 *.lib
 *.obj
 *.elf
+build
+root
