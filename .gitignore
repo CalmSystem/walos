@@ -6,3 +6,5 @@
 *.elf
 build
 root
+.envrc
+.vscode

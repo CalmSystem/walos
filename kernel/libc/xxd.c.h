@@ -4,7 +4,7 @@
 #include "stdio.h"
 
 /** Minimal human readable hexdump */
-void hex_dump(unsigned int offset, void *addr, int len) {
+void hex_dump(unsigned int offset, const void *addr, int len) {
   int i;
   unsigned char bufferLine[17];
   unsigned char *pc = (unsigned char *)addr;
@@ -15,7 +15,7 @@ void hex_dump(unsigned int offset, void *addr, int len) {
       // Bogus test for zero bytes!
       // if (pc[i] == 0x00)
       //    exit(0);
-      printf("%08zx: ", offset);
+      printf("%08x: ", offset);
       offset += (i % 16 == 0) ? 16 : i % 16;
     }
 

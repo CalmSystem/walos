@@ -1,0 +1,4 @@
+Sample ping pong server
+echo,srv/echo.wasm,screen:out
+Sends Hello world with screen and echo
+hello,srv/hello.wasm,screen:out,echo:

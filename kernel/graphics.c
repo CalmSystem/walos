@@ -1,6 +1,7 @@
 #include "graphics.h"
 #include "string.h"
 #include "stdio.h"
+#include "assert.h"
 
 PUTBYTES_STATE pb_state = {0};
 

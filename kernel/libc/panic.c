@@ -31,6 +31,10 @@ void __attribute__((noreturn)) panic(const char *fmt, ...)
 	va_start(ap, fmt);
 	vprintf(fmt, ap);
 	va_end(ap);
-	//FIXME: trap *(char *)0 = 1;
-	while (1);
+	__builtin_trap();
+}
+
+void __attribute__((noreturn)) abort()
+{
+	__builtin_trap();
 }

@@ -5,24 +5,40 @@ WebAssembly Language based Operating System is a toy OS using the [Language-base
 Processes are [WASM](https://webassembly.org/) binary converted to safe native assembly at runtime. By avoiding hardware protection toggle, syscalls are simple function calls triggered using extended [WASI](https://wasi.dev/).
 
 
-### Built With
+## Built With
 
 * Make
-* LLVM toolchain: `clang`, `lld`
-* QEMU: `x86_64`, `ovmf`
-* [WebAssembly Micro Runtime](https://github.com/bytecodealliance/wasm-micro-runtime)
+* LLVM toolchain - `clang`, `lld`, `wasm-ld`
+* QEMU - `x86_64`, `ovmf`
+* [WASM3](https://github.com/wasm3/wasm3)
 * Love and insomnia
 
 This proof-of-concept version is built in C and assembly. Further versions may be implemented in Rust to enjoy safety and lastest WebAssembly improvements.
 
 ## Features
 
-* UEFI x86_64 hello
+* Wasm interpreter
+* Service manager
+* VGA graphics
+* ELF kernel
+* UEFI64 loader
+
+### TODO
+
+* Scheduling
+* WASI
+* Multi-core
 
 ## Getting started
 
-* Debian/Ubuntu: `sudo apt-get install qemu-system ovmf clang lld`
+### Prerequisites
 
+OS | Install | Export
+-- | ------- | ------
+Debian / Ubuntu | `sudo apt-get install make qemu-system ovmf clang lld`
+Arch / Manjaro | `sudo pacman -S make qemu edk2-ovmf clang lld` | `OVMF=/usr/share/ovmf/x64/OVMF.fd`
+
+### Setup
 
 1. Clone
 ```sh
@@ -37,6 +53,18 @@ make all
 ```sh
 make qemu
 ```
+
+## Project structure
+
+* bin/ - Assets to copy in system root
+* build/ - Temporary build files
+* include/ - Shared structures declarations
+* kernel/ - OS core
+    * libc/ - Minimal C library
+    * wax/ - WebAssebly eXecution using WASM3
+* loader/ - Boot loaders
+* srv/ - Wasm services aka `driverspace`
+* root/ - Filesystem root (output)
 
 ## Similar projects
 * [Nebulet](https://github.com/nebulet/nebulet) - A microkernel that implements a WebAssembly "usermode" that runs in Ring 0

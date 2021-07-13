@@ -1,8 +1,9 @@
 #ifndef __GRAPHICS_H
 #define __GRAPHICS_H
 
-#include "native.h"
-#include "bootinfo.h"
+#include "stdint.h"
+#include "psf.h"
+#include "lfb.h"
 
 typedef struct {
     uint32_t x, y, fg, bg;
