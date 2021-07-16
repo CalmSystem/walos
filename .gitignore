@@ -4,6 +4,8 @@
 *.lib
 *.obj
 *.elf
+*.img
+*.iso
 build
 root
 .envrc

@@ -535,6 +535,26 @@ _           (CompileFunction (f));
     _catch: return result;
 }
 
+M3Result m3_FixStart (IM3Module io_module, const char * const i_functionName)
+{
+    M3Result result = m3Err_none;
+
+    if (io_module->startFunction < 0)
+    {
+        IM3Function function = v_FindFunction(io_module, i_functionName);
+        if (function == NULL)
+            _throw (m3Err_functionLookupFailed);
+
+        IM3FuncType ftype = function->funcType;
+        if (ftype->numArgs != 0 || ftype->numRets != 0)
+            _throw (m3Err_argumentCountMismatch);
+
+        io_module->startFunction = ((uintptr_t)function - (uintptr_t)&io_module->functions[0]) / sizeof(*function);
+    }
+
+    _catch: return result;
+}
+
 M3Result  m3_RunStart  (IM3Module io_module)
 {
 #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION

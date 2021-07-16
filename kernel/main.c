@@ -1,9 +1,8 @@
 #include "native.h"
 #include "loader.h"
-#include "graphics.h"
-#include "srv.h"
 #include "wax/wax.h"
 #include "stdio.h"
+#include "srv_internal.h"
 
 void _start(BOOT_INFO* bootinfo) {
 
@@ -17,12 +16,19 @@ void _start(BOOT_INFO* bootinfo) {
     printf("CR3 %lx\n", CR3);
 
     EXEC_ENGINE *engine = load_m3_engine();
+    assert(engine && "Failed to load WASM runtime");
     puts("Engine: Loaded");
 
     if (bootinfo->services.ptr) srv_use(bootinfo->services, engine);
 
+    srv_add_internals();
+
     puts("Go !!!");
-    int res = srv_send("hello:", NULL, 0);
+    int res = srv_send("hello:", NULL, 0, NULL);
+    if (res < 0) printf("err -%d", -res);
+    else printf("got %d\n", res);
+
+    res = srv_send("rec:", (const uint8_t*)"9\n", 3, NULL);
     if (res < 0) printf("err -%d", -res);
     else printf("got %d\n", res);
 

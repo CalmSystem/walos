@@ -13,7 +13,7 @@ struct {
     uint16_t char_width, char_height;
 } graphics;
 
-inline void reset_state(PUTBYTES_STATE* st) {
+static inline void reset_state(PUTBYTES_STATE* st) {
     st->x = 0;
     st->y = 0;
     st->fg = RGB_WHITE;
@@ -82,7 +82,7 @@ void graphics_use_dummy() {
 LINEAR_FRAMEBUFFER* lfb;
 PSF1_FONT* font;
 
-inline uint32_t* lfb_pixel_addr(uint32_t x, uint32_t y) {
+static inline uint32_t* lfb_pixel_addr(uint32_t x, uint32_t y) {
     return (uint32_t*)lfb->base_addr + lfb->scan_line_size * y + x;
 }
 

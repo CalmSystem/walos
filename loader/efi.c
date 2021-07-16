@@ -340,7 +340,7 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
         EFI_MEMORY_DESCRIPTOR* map = NULL;
         uint32_t desc_version;
         st->BootServices->GetMemoryMap(&mmap.size, map, &map_key, &mmap.desc_size, &desc_version);
-        st->BootServices->AllocatePool(EfiRuntimeServicesData, mmap.size, (void**)&map);
+        st->BootServices->AllocatePool(EfiRuntimeServicesData, mmap.size+2, (void**)&map);
         st->BootServices->GetMemoryMap(&mmap.size, map, &map_key, &mmap.desc_size, &desc_version);
         mmap.ptr = map;
     }

@@ -4,8 +4,9 @@
 #include "stdint.h"
 typedef struct {
     const char *service;
-    const uint8_t *path;
+    const char *path;
 } PROGRAM_RIGHT;
+/** Program context (code and rights) */
 typedef struct {
     const uint8_t *code;
     uint32_t code_size;
@@ -13,16 +14,12 @@ typedef struct {
     uint32_t rights_size;
 } PROGRAM;
 
+/** Program instance aka process */
 typedef void EXEC_INST;
 
-enum EXEC_FLAGS {
-    X_NONE = 0,
-    X_START = 1 << 0
-};
-
 typedef struct exec_engine_t {
-    EXEC_INST* (*load)(struct exec_engine_t*, PROGRAM*, int flags);
-    int (*call)(struct exec_engine_t*, EXEC_INST*, const char* name, uint32_t argc, uint32_t* argv);
+    EXEC_INST *(*srv_load)(struct exec_engine_t*, PROGRAM*);
+    int32_t (*srv_call)(EXEC_INST*, const char* sub, const uint8_t* data, uint64_t datalen);
 } EXEC_ENGINE;
 
 #endif

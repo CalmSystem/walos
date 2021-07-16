@@ -9,7 +9,7 @@
 #define LFB_MAX_HEIGHT 0 // 1080
 #define LFB_RATIO_WIDTH(height) (height*16/9)
 
-#define K_PATH "kernel.elf"
+#define K_PATH "boot\\kernel.elf"
 #define FONT_PATH "shr\\zap-vga16.psf"
 #define SRV_PATH "cfg\\services.csv"
 

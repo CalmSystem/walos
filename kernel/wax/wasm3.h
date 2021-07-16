@@ -235,6 +235,9 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
     // Calling m3_RunStart is optional
     M3Result            m3_RunStart                 (IM3Module i_module);
 
+    // Find start function if needs
+    M3Result            m3_FixStart                 (IM3Module io_module, const char * const i_functionName);
+
     // Arguments and return values are passed in and out through the stack pointer _sp.
     // Placeholder return value slots are first and arguments after. So, the first argument is at _sp [numReturns]
     // Return values should be written into _sp [0] to _sp [num_returns - 1]
@@ -325,7 +328,8 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
 # define m3ApiGetArgMem(TYPE, NAME) TYPE NAME = (TYPE)m3ApiOffsetToPtr(* ((uint32_t *) (_sp++)));
 
 # define m3ApiIsNullPtr(addr)       ((void*)(addr) <= _mem)
-# define m3ApiCheckMem(addr, len)   { if (M3_UNLIKELY(m3ApiIsNullPtr(addr) || ((uint64_t)(uintptr_t)(addr) + (len)) > ((uint64_t)(uintptr_t)(_mem)+m3_GetMemorySize(runtime)))) m3ApiTrap(m3Err_trapOutOfBoundsMemoryAccess); }
+# define m3ApiInvalidMem(addr, len) M3_UNLIKELY(m3ApiIsNullPtr(addr) || ((uint64_t)(uintptr_t)(addr) + (len)) > ((uint64_t)(uintptr_t)(_mem)+m3_GetMemorySize(runtime)))
+# define m3ApiCheckMem(addr, len)   { if (m3ApiInvalidMem(addr, len)) m3ApiTrap(m3Err_trapOutOfBoundsMemoryAccess); }
 
 # define m3ApiRawFunction(NAME)     const void * NAME (IM3Runtime runtime, IM3ImportContext _ctx, uint64_t * _sp, void * _mem)
 # define m3ApiReturn(VALUE)         { *raw_return = (VALUE); return m3Err_none; }

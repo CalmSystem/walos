@@ -25,18 +25,24 @@ This proof-of-concept version is built in C and assembly. Further versions may b
 
 ### TODO
 
+* Allocator
 * Scheduling
 * WASI
 * Multi-core
+
+### MAYBE
+
+* Zero-copy srv_send
+* GRUB Multiboot2
 
 ## Getting started
 
 ### Prerequisites
 
-OS | Install | Export
--- | ------- | ------
-Debian / Ubuntu | `sudo apt-get install make qemu-system ovmf clang lld`
-Arch / Manjaro | `sudo pacman -S make qemu edk2-ovmf clang lld` | `OVMF=/usr/share/ovmf/x64/OVMF.fd`
+OS | Needed | Optional | Export
+-- | -- | -- | --
+Debian / Ubuntu | `make qemu-system ovmf clang lld` | `mtools xorriso`
+Arch / Manjaro | `make qemu edk2-ovmf clang lld` | `mtools libisoburn` | `OVMF=/usr/share/ovmf/x64/OVMF.fd`
 
 ### Setup
 
@@ -47,11 +53,15 @@ cd walos
 ```
 2. Compile
 ```sh
-make all
+make root
 ```
 3. Start with QEMU
 ```sh
 make qemu
+```
+* Create ISO *with optional prerequisites*
+```sh
+make iso
 ```
 
 ## Project structure
@@ -64,7 +74,12 @@ make qemu
     * wax/ - WebAssebly eXecution using WASM3
 * loader/ - Boot loaders
 * srv/ - Wasm services aka `driverspace`
-* root/ - Filesystem root (output)
+
+### Outputs
+
+* root/ - Filesystem root
+* walos.img - Usb device image
+* walos.iso - Cdrom image
 
 ## Similar projects
 * [Nebulet](https://github.com/nebulet/nebulet) - A microkernel that implements a WebAssembly "usermode" that runs in Ring 0
