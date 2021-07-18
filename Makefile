@@ -1,4 +1,5 @@
 CC := clang
+AS := clang
 LD := lld
 ARCH ?= x86_64
 
@@ -27,7 +28,7 @@ EFI_OUT := $(ROOT_DIR)/efi/boot/bootx64.efi
 EFI_CFLAGS := $(CFLAGS) -target $(ARCH)-unknown-windows -O2
 EFI_LDFLAGS := -flavor link -subsystem:efi_application -entry:efi_main
 
-K_SRCS := $(wildcard kernel/*.c kernel/**/*.c)
+K_SRCS := $(wildcard kernel/*.c kernel/**/*.c kernel/*.S)
 K_LDS := kernel/kernel.ld
 K_OBJS := $(K_SRCS:%=$(BUILD_DIR)/%.o)
 K_DEPS := $(K_OBJS:.o=.d)
@@ -50,9 +51,9 @@ $(EFI_OUT): $(EFI_SRC)
 	$(MKDIR_P) $(dir $@)
 	$(LD) $(EFI_LDFLAGS) $(BUILD_DIR)/loader/efi.o.c -out:$@
 
-#$(BUILD_DIR)/%.s.o: %.s
-#	$(MKDIR_P) $(dir $@)
-#	$(AS) $(ASFLAGS) -c $< -o $@
+$(BUILD_DIR)/%.S.o: %.S
+	$(MKDIR_P) $(dir $@)
+	$(AS) $(K_ASFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/%.c.o: %.c
 	$(MKDIR_P) $(dir $@)

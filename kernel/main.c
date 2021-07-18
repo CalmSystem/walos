@@ -1,19 +1,18 @@
 #include "native.h"
 #include "loader.h"
+#include "interrupt.h"
 #include "wax/wax.h"
 #include "stdio.h"
 #include "srv_internal.h"
 
 void _start(BOOT_INFO* bootinfo) {
 
+    load_interrupts();
+
     if (bootinfo->lfb && bootinfo->font) graphics_use_lfb(bootinfo->lfb, bootinfo->font);
     else graphics_use_dummy();
 
     puts("Hello Walos !\n...");
-
-    uintn_t CR3;
-    __asm__ __volatile__("mov %%cr3, %0" : "=a"(CR3));
-    printf("CR3 %lx\n", CR3);
 
     EXEC_ENGINE *engine = load_m3_engine();
     assert(engine && "Failed to load WASM runtime");
@@ -32,10 +31,11 @@ void _start(BOOT_INFO* bootinfo) {
     if (res < 0) printf("err -%d", -res);
     else printf("got %d\n", res);
 
+    __asm__ __volatile__("int $3");
+
     while(1) {
-        __asm__ __volatile__("sti");
-        __asm__ __volatile__("hlt");
-        __asm__ __volatile__("cli");
-        putchar('.');
+        __asm__ __volatile__("sti":::"memory");
+        __asm__ __volatile__("hlt":::"memory");
+        __asm__ __volatile__("cli":::"memory");
     }
 }

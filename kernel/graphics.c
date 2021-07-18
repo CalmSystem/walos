@@ -20,6 +20,15 @@ static inline void reset_state(PUTBYTES_STATE* st) {
     st->bg = RGB_BLACK;
 }
 
+void graphics_size(uint32_t *screen_width, uint32_t *screen_height,
+                   uint16_t *char_width, uint16_t *char_height)
+{
+    if (screen_width) *screen_width = graphics.screen_width;
+    if (screen_height) *screen_height = graphics.screen_height;
+    if (char_width) *char_width = graphics.char_width;
+    if (char_height) *char_height = graphics.char_height;
+}
+
 void putbytes(const char *s, int len) { putbytes_at(s, len, &pb_state); }
 void putbytes_at(const char *s, int len, PUTBYTES_STATE* st) {
     for(int i = 0; i < len && s[i]; i++) {

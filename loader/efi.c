@@ -245,7 +245,7 @@ static inline SERVICE_TABLE load_services(char16_t* idx_path) {
             }
         } else if (*p == ':' && commas > 1 && srv->program && !rgt->path) {
             *p = '\0';
-            rgt->path = (uint8_t*)p+1;
+            rgt->path = p+1;
         }
     }
 
