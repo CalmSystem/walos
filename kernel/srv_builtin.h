@@ -1,5 +1,5 @@
-#ifndef __SRV_INTERNAL
-#define __SRV_INTERNAL
+#ifndef __SRV_BUILTIN
+#define __SRV_BUILTIN
 
 #include "srv.h"
 #include "graphics.h"
@@ -11,7 +11,8 @@ int32_t srv_stdout(const char* sub, const uint8_t* data, size_t len) {
     return 1;
 }
 
-static inline void srv_add_internals() {
+/** Bind services to internal functions */
+static inline void srv_register_builtin() {
     int ok =
     srv_add_internal("stdout", srv_stdout, NULL);
     assert(ok && "Failed to load internal services");

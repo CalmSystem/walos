@@ -3,6 +3,7 @@
 
 #define GOP_PIXEL_FORMAT 1
 
+/** 32bit VGA like framebuffer */
 typedef struct {
 	void* base_addr;
 	uint32_t width;

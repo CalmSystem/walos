@@ -13,9 +13,9 @@ static inline int memcmp(const void* aptr, const void* bptr, size_t n){
     return 0;
 }
 
-static inline EFI_STATUS load_kernel(char16_t* path, Elf64_Addr* entry) {
+static inline Elf64_Addr load_kernel(char16_t* path) {
     EFI_FILE_PROTOCOL* file = open_file(NULL, path);
-    if (!file) return 1;
+    if (!file) return 0;
 
     Elf64_Ehdr header;
     {
@@ -32,7 +32,7 @@ static inline EFI_STATUS load_kernel(char16_t* path, Elf64_Addr* entry) {
         header.e_version != EV_CURRENT
     ) {
         println(L"Kernel: Bad format");
-        return 1;
+        return 0;
     }
 
     Elf64_Phdr* phdrs;
@@ -62,11 +62,10 @@ static inline EFI_STATUS load_kernel(char16_t* path, Elf64_Addr* entry) {
             }
         }
     }
-    *entry = header.e_entry;
-
     system_table->BootServices->FreePool(phdrs);
     file->Close(file);
-    return EFI_SUCCESS;
+
+    return header.e_entry;
 }
 
 static inline PSF1_FONT* load_psf1_font(char16_t* path) {
@@ -313,11 +312,9 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
     println(L"Walos EFI loader");
 
     BOOT_INFO bootinfo = {0};
-    Elf64_Addr kernel_entry;
-    EFI_STATUS status;
 
-    status = load_kernel(WSTR(K_PATH), &kernel_entry);
-    if (status & EFI_ERR) return EFI_SUCCESS;
+    Elf64_Addr kernel_entry = load_kernel(WSTR(K_PATH));
+    if (!kernel_entry) return EFI_SUCCESS;
 
     println(L"Kernel: Loaded");
 
@@ -328,7 +325,7 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
     if (bootinfo.services.ptr) println(L"Services: Loaded");
 
     LINEAR_FRAMEBUFFER gop;
-    status = load_gop(&gop);
+    EFI_STATUS status = load_gop(&gop);
     if (!(status & EFI_ERR)) {
         bootinfo.lfb = &gop;
         println(L"GOP: Loaded");
@@ -340,7 +337,7 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
         EFI_MEMORY_DESCRIPTOR* map = NULL;
         uint32_t desc_version;
         st->BootServices->GetMemoryMap(&mmap.size, map, &map_key, &mmap.desc_size, &desc_version);
-        st->BootServices->AllocatePool(EfiRuntimeServicesData, mmap.size+2, (void**)&map);
+        st->BootServices->AllocatePool(EfiLoaderData, mmap.size+2, (void**)&map);
         st->BootServices->GetMemoryMap(&mmap.size, map, &map_key, &mmap.desc_size, &desc_version);
         mmap.ptr = map;
     }

@@ -120,7 +120,7 @@ void tic_PIT() {
         .fg = PACK_RGB(0, 255, 0)
     };
     uint16_t chrx;
-    graphics_size(&pb_state.x, NULL, &chrx, NULL);
+    graphics_get_size(&pb_state.x, NULL, &chrx, NULL);
     pb_state.x = pb_state.x / chrx - 8;
     putbytes_at(time_str, 8, &pb_state);
 }
@@ -138,7 +138,7 @@ void enable_irq(uint8_t irq, bool on) {
     outb(masks, dataport);
 }
 
-void load_interrupts() {
+void interrupts_setup() {
 
     __asm__ __volatile__("cli":::"memory");
 

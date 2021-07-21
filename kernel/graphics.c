@@ -20,7 +20,7 @@ static inline void reset_state(PUTBYTES_STATE* st) {
     st->bg = RGB_BLACK;
 }
 
-void graphics_size(uint32_t *screen_width, uint32_t *screen_height,
+void graphics_get_size(uint32_t *screen_width, uint32_t *screen_height,
                    uint16_t *char_width, uint16_t *char_height)
 {
     if (screen_width) *screen_width = graphics.screen_width;

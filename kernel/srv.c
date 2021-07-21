@@ -59,23 +59,23 @@ static inline int has_right(PROGRAM* p, const char* srv, size_t srvlen, const ch
 }
 
 int srv_send(const char *path, const uint8_t *data, size_t len, PROGRAM* emitter) {
-    char * sep = strchr(path, SRV_SEPARATOR);
-    if (!sep) return -2;
+    char* sep = strchr(path, SRV_SEPARATOR);
+    if (sep == NULL) return -2;
 
     uint32_t srvlen = sep-path;
     if (emitter && !has_right(emitter, path, srvlen, sep+1))
         return -2;
 
     SERVICE* srv = srv_findn(path, srvlen);
-    if (!srv) return -1;
+    if (srv == NULL) return -1;
 
     if (srv->program == INTERNAL_PROG) {
-        if (!srv->instance) return -3;
+        if (srv->instance == NULL) return -3;
         return ((int32_t (*)(const char*, const uint8_t*, size_t))srv->instance)(sep+1, data, len);
     } else {
-        if (!srv->instance) {
+        if (srv->instance == NULL) {
             srv->instance = engine->srv_load(engine, srv->program);
-            if (!srv->instance) srv->instance = BAD_EXEC_INST;
+            if (srv->instance == NULL) srv->instance = BAD_EXEC_INST;
         }
         if (srv->instance == BAD_EXEC_INST) return -3;
 

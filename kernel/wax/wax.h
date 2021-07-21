@@ -3,6 +3,7 @@
 
 #include "exec.h"
 
-EXEC_ENGINE* load_m3_engine();
+/** Initialize Wasm3 execution engine */
+EXEC_ENGINE* exec_load_m3();
 
 #endif

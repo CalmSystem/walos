@@ -10,6 +10,7 @@ typedef struct {
 	unsigned char charsize;
 } PSF1_HEADER;
 
+/** Parsed Pixel Fixed Size font file */
 typedef struct {
 	PSF1_HEADER* header;
 	void* glyph_buffer;

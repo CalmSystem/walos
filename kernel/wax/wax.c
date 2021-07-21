@@ -121,7 +121,7 @@ err:
 }
 
 struct exec_m3_t exec_m3 = {0};
-EXEC_ENGINE* load_m3_engine() {
+EXEC_ENGINE* exec_load_m3() {
     if (exec_m3.env) return &exec_m3.handle;
 
     exec_m3.env = m3_NewEnvironment();

@@ -13,13 +13,18 @@ typedef struct {
 #define RGB_NONE (1<<24)
 #define RGB_WHITE (RGB_NONE-1)
 
+/** Void graphics commands */
 void graphics_use_dummy();
+/** Direct write to GPU buffer */
 void graphics_use_lfb(LINEAR_FRAMEBUFFER*, PSF1_FONT*);
 
-void graphics_size(uint32_t *screen_width, uint32_t *screen_height,
+/** Get informations about graphics output */
+void graphics_get_size(uint32_t *screen_width, uint32_t *screen_height,
                    uint16_t *char_width, uint16_t *char_height);
 
+/** Print text */
 void putbytes(const char *s, int len);
+/** Print text with given position and color */
 void putbytes_at(const char *s, int len, PUTBYTES_STATE* st);
 
 #endif

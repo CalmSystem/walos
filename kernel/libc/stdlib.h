@@ -19,4 +19,9 @@ unsigned long long strtoull (const char *__restrict, char **__restrict, int);
 
 void abort( void );
 
+void* malloc(size_t size);
+void* calloc(size_t num, size_t size);
+void* realloc(void* ptr, size_t size);
+void free(void* ptr);
+
 #endif

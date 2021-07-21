@@ -17,6 +17,7 @@ typedef struct {
 /** Program instance aka process */
 typedef void EXEC_INST;
 
+/** Virtual WASM runtime */
 typedef struct exec_engine_t {
     EXEC_INST *(*srv_load)(struct exec_engine_t*, PROGRAM*);
     int32_t (*srv_call)(EXEC_INST*, const char* sub, const uint8_t* data, uint64_t datalen);

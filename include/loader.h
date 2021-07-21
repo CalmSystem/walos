@@ -13,11 +13,12 @@
 #define FONT_PATH "shr\\zap-vga16.psf"
 #define SRV_PATH "cfg\\services.csv"
 
+/** Informations from loader to kernel */
 typedef struct {
     LINEAR_FRAMEBUFFER* lfb;
     PSF1_FONT* font;
     EFI_MEMORY_MAP* mmap;
-	SERVICE_TABLE services;
+    SERVICE_TABLE services;
 } BOOT_INFO;
 
 #endif

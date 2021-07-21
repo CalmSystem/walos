@@ -21,11 +21,10 @@ This proof-of-concept version is built in C and assembly. Further versions may b
 * Service manager
 * VGA graphics
 * ELF kernel
-* UEFI64 loader
+* UEFIx64 loader
 
 ### TODO
 
-* Allocator
 * Scheduling
 * WASI
 * Multi-core

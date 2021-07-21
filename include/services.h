@@ -3,6 +3,7 @@
 
 #include "exec.h"
 
+/** Separate service name and subpath */
 #define SRV_SEPARATOR ':'
 typedef struct {
     PROGRAM *program;
@@ -12,6 +13,8 @@ typedef struct {
     EXEC_INST *instance;
 } SERVICE;
 
+/** Table of services
+ * Path to program map */
 typedef struct {
     SERVICE *ptr;
     uint32_t free_services;
