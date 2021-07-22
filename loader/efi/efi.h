@@ -82,6 +82,9 @@ typedef uint64_t    EFI_TPL;
 typedef uint64_t    EFI_VIRTUAL_ADDRESS;
 typedef int64_t     intn_t;
 typedef uint64_t    uintn_t;
+typedef intn_t      ssize_t;
+typedef uintn_t     size_t;
+#define __INTN_DEF
 
 typedef struct EFI_GUID {
     uint32_t  Data1;

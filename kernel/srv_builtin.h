@@ -6,9 +6,13 @@
 #include "stddef.h"
 #include "assert.h"
 
-int32_t srv_stdout(const char* sub, const uint8_t* data, size_t len) {
-    putbytes((const char*)data, len);
-    return 1;
+ssize_t srv_stdout(const char* sub, struct iovec* iov, size_t iovcnt) {
+    ssize_t written = 0;
+    for (size_t i = 0; i < iovcnt; i++) {
+        putbytes((const char*)iov[i].iov_base, iov[i].iov_len);
+        written += iov[i].iov_len;
+    }
+    return written;
 }
 
 /** Bind services to internal functions */

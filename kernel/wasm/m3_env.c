@@ -232,6 +232,7 @@ void  Runtime_Release  (IM3Runtime i_runtime)
 
     m3_Free (i_runtime->stack);
     m3_Free (i_runtime->memory.mallocated);
+    m3_Free (i_runtime->wasiContext);
 }
 
 
@@ -567,6 +568,7 @@ M3Result  m3_RunStart  (IM3Module io_module)
     if (io_module and io_module->startFunction >= 0)
     {
         IM3Function function = & io_module->functions [io_module->startFunction];
+        io_module->startFunction = -1;
 
         if (not function->compiled)
         {
@@ -581,8 +583,6 @@ _           (CompileFunction (function));
         IM3Runtime runtime = module->runtime;
 
 _       ((M3Result) Call (function->compiled, (m3stack_t) runtime->stack, runtime->memory.mallocated, d_m3OpDefaultArgs));
-
-        io_module->startFunction = -1;
     }
 
     _catch: return result;

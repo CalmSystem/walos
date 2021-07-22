@@ -1,4 +1,5 @@
 #include "wasm3.h"
+#include "m3_api_wasi.h"
 #include "../srv.h"
 #include "string.h"
 #include "stdio.h"
@@ -8,7 +9,6 @@ struct exec_m3_t {
     IM3Environment env;
 };
 
-m3ApiRawFunction(m3_srv_send);
 EXEC_INST* m3_srv_load(EXEC_ENGINE* self, PROGRAM* p) {
 
     IM3Environment env = ((struct exec_m3_t*)self)->env;
@@ -26,7 +26,15 @@ EXEC_INST* m3_srv_load(EXEC_ENGINE* self, PROGRAM* p) {
     if (res) { m3_FreeModule(mod); goto err; }
 
     res = m3_LinkRawFunction(mod, "srv", "send", "i(iii)", m3_srv_send);
+    if (res && res != m3Err_functionLookupFailed) goto err;
+    res = m3_LinkRawFunction(mod, "srv", "sendv", "i(iiii)", m3_srv_sendv);
+    if (res && res != m3Err_functionLookupFailed) goto err;
+
+    res = m3_LinkWASI(mod);
     if (res) goto err;
+
+    res = m3_RunStart(mod);
+    if (res && res != m3Err_trapExit) goto err;
 
     // Check exports
     IM3Function f;
@@ -57,18 +65,7 @@ err:
     return NULL;
 }
 
-m3ApiRawFunction(m3_srv_send) {
-    m3ApiReturnType(int32_t);
-    m3ApiGetArgMem(const char*, path);
-    m3ApiGetArgMem(const uint8_t*, data);
-    m3ApiGetArg(uint32_t, len);
-    m3ApiCheckMem(path, strlen(path));
-    m3ApiCheckMem(data, len);
-    PROGRAM *p = m3_GetUserData(runtime);
-    m3ApiReturn(p ? srv_send(path, data, len, p) : -2);
-}
-
-int m3_srv_call(EXEC_INST* inst, const char* sub, const uint8_t *data, size_t len) {
+ssize_t m3_srv_call(EXEC_INST* inst, const char* sub, struct iovec *iov, size_t iovcnt) {
     IM3Runtime runtime = (IM3Runtime)inst;
     void* _mem = m3_GetMemory(runtime, NULL, 0);
 
@@ -81,37 +78,41 @@ int m3_srv_call(EXEC_INST* inst, const char* sub, const uint8_t *data, size_t le
     m3_FindFunction(&fhndl, runtime, SRV_PACKET_HNDL);
 
     M3Result res;
-    uint32_t ret = 0;
-    const void *retptr = &ret;
-    size_t sent = 0;
-    while (sent < len) {
-        // Allocate packet
-        res = m3_Call(faloc, 0, NULL);
-        if (res) goto err;
-        uint32_t offset;
-        const void *offptr = &offset;
-        res = m3_GetResults(faloc, 1, &offptr);
-        if (res) goto err;
-        // Check packet
-        if (!offset) return -4;
-        srv_packet_t *packet = m3ApiOffsetToPtr(offset);
-        if (m3ApiInvalidMem(packet, 2*sizeof(uint32_t))) return -4;
-        size_t p_size = SRV_PACKET_SIZE(*packet);
-        if (p_size <= sublen+1) return -4;
-        if (m3ApiInvalidMem(packet, p_size)) return -4;
-        // Write packet
-        packet->sublen = sublen;
-        memcpy(&packet->buf[0], sub, subsize);
-        packet->datalen = p_size - subsize > len - sent ?
-            len - sent : p_size - subsize;
-        memcpy(&packet->buf[subsize], data + sent, packet->datalen);
-        sent += packet->datalen;
-        // Send packet
-        res = m3_Call(fhndl, 1, &offptr);
-        if (res) goto err;
-        res = m3_GetResults(fhndl, 1, &retptr);
-        if (res) goto err;
-        if (ret < 0) return ret;
+    ssize_t ret = 0;
+    for (size_t i = 0; i < iovcnt; i++) {
+        size_t sent = 0;
+        while (sent < iov[i].iov_len) {
+            // Allocate packet
+            res = m3_Call(faloc, 0, NULL);
+            if (res) goto err;
+            uint32_t offset;
+            const void *offptr = &offset;
+            res = m3_GetResults(faloc, 1, &offptr);
+            if (res) goto err;
+            // Check packet
+            if (!offset) return -4;
+            srv_packet_t *packet = m3ApiOffsetToPtr(offset);
+            if (m3ApiInvalidMem(packet, 2*sizeof(uint32_t))) return -4;
+            size_t p_size = SRV_PACKET_SIZE(*packet);
+            if (p_size <= sublen+1) return -4;
+            if (m3ApiInvalidMem(packet, p_size)) return -4;
+            // Write packet
+            packet->sublen = sublen;
+            memcpy(&packet->buf[0], sub, subsize);
+            packet->datalen = p_size - subsize > iov[i].iov_len - sent ?
+                iov[i].iov_len - sent : p_size - subsize;
+            memcpy(&packet->buf[subsize], iov[i].iov_base + sent, packet->datalen);
+            sent += packet->datalen;
+            // Send packet
+            res = m3_Call(fhndl, 1, &offptr);
+            if (res) goto err;
+            uint32_t out = 0;
+            const void *outptr = &out;
+            res = m3_GetResults(fhndl, 1, &outptr);
+            if (res) goto err;
+            if (out < 0) return out;
+            ret += out;
+        }
     }
 
     return ret;

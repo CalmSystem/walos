@@ -1,10 +1,8 @@
-#include "native.h"
+#include "memory.h"
 #include "loader.h"
 #include "interrupt.h"
-#include "memory.h"
-#include "wax/wax.h"
-#include "stdio.h"
 #include "srv_builtin.h"
+#include "stdio.h"
 
 void _start(BOOT_INFO* bootinfo) {
 
@@ -27,11 +25,12 @@ void _start(BOOT_INFO* bootinfo) {
     srv_register_builtin();
 
     puts("Go !!!");
-    int res = srv_send("hello:", NULL, 0, NULL);
-    if (res < 0) printf("err -%d", -res);
+    int res = service_send("hi:", NULL, 0, NULL);
+    if (res < 0) printf("err -%d\n", -res);
     else printf("got %d\n", res);
 
-    res = srv_send("rec:", (const uint8_t*)"9\n", 3, NULL);
+    struct iovec iov = { "9\n", 3 };
+    res = service_send("rec:", &iov, 1, NULL);
     if (res < 0) printf("err -%d", -res);
     else printf("got %d\n", res);
 

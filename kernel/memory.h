@@ -1,6 +1,6 @@
 #ifndef __MEMORY_H
 #define __MEMORY_H
-#include "native.h"
+#include "sys/types.h"
 #include "mmap.h"
 
 #define PAGE_SIZE 0x1000

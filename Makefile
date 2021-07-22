@@ -3,6 +3,11 @@ AS := clang
 LD := lld
 ARCH ?= x86_64
 
+WASI_SDK_VERSION ?= 12
+WASI_SDK_REVISION ?= 0
+WASI_SDK ?= $(HOME)/.cache/wasi-sdk-$(WASI_SDK_VERSION)
+WASI_CC := $(WASI_SDK)/bin/clang --sysroot=$(WASI_SDK)/share/wasi-sysroot
+
 BUILD_DIR ?= build
 ROOT_DIR ?= root
 IMG_OUT ?= walos.img
@@ -37,11 +42,13 @@ K_OUT := $(ROOT_DIR)/boot/kernel.elf
 K_CFLAGS := $(CFLAGS) -target $(ARCH)-unknown-elf -O3
 K_LDFLAGS := -flavor ld -T $(K_LDS) -static -Bsymbolic -nostdlib -z max-page-size=0x1000 -strip-all
 
-WASM_FLAGS := --no-standard-libraries -ffreestanding -Wall -Werror -Ofast -target wasm32
-SRV_FLAGS := $(WASM_FLAGS) -Isrv/include -Wl,--export="srv_prehandle" -Wl,--export="srv_handle" -Wl,--allow-undefined-file="srv/include/extern.syms"
+WASM_RAW_FLAGS := --no-standard-libraries -ffreestanding -Wall -Werror -Ofast -target wasm32 -Isrv/libc
+WASM_WASI_FLAGS := -Wall -Werror -Ofast
+SRV_FLAGS := -Isrv/include -Wl,--export="srv_prehandle" -Wl,--export="srv_handle" -Wl,--allow-undefined-file="srv/include/extern.syms"
 SRV_OUTS := \
 	$(patsubst %.c,$(ROOT_DIR)/%.wasm,$(wildcard srv/*.c)) \
 	$(patsubst %.cpp,$(ROOT_DIR)/%.wasm,$(wildcard srv/*.cpp))
+SRV_OUTS := $(patsubst %.wasi.wasm,%.wasm,$(SRV_OUTS))
 
 default: all
 
@@ -65,11 +72,27 @@ $(K_OUT): $(K_OBJS)
 
 $(ROOT_DIR)/srv/%.wasm: srv/%.c
 	$(MKDIR_P) $(dir $@)
-	$(CC) $(SRV_FLAGS) $< -o $@
+	$(CC) $(WASM_RAW_FLAGS) $(SRV_FLAGS) $< -o $@
 
 $(ROOT_DIR)/srv/%.wasm: srv/%.cpp
 	$(MKDIR_P) $(dir $@)
-	$(CC) $(SRV_FLAGS) $< -o $@
+	$(CC) $(WASM_RAW_FLAGS) $(SRV_FLAGS) $< -o $@
+
+$(WASI_SDK):
+	echo "Downloading WASI SDK"
+	wget -nv --show-progress -O $(BUILD_DIR)/wasi.tar.gz \
+		https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-$(WASI_SDK_VERSION)/wasi-sdk-$(WASI_SDK_VERSION).$(WASI_SDK_REVISION)-linux.tar.gz
+	tar xf $(BUILD_DIR)/wasi.tar.gz --checkpoint=.100 -C $(BUILD_DIR)
+	rm $(BUILD_DIR)/wasi.tar.gz
+	mv $(BUILD_DIR)/wasi-sdk-$(WASI_SDK_VERSION).$(WASI_SDK_REVISION) $(WASI_SDK)
+
+$(ROOT_DIR)/srv/%.wasm: srv/%.wasi.c $(WASI_SDK)
+	$(MKDIR_P) $(dir $@)
+	$(WASI_CC) $(WASM_WASI_FLAGS) $(SRV_FLAGS) $< -o $@
+
+$(ROOT_DIR)/srv/%.wasm: srv/%.wasi.cpp $(WASI_SDK)
+	$(MKDIR_P) $(dir $@)
+	$(WASI_CC) $(WASM_WASI_FLAGS) $(SRV_FLAGS) $< -o $@
 
 -include $(K_DEPS)
 

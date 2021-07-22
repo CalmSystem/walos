@@ -3,3 +3,4 @@ echo,srv/echo.wasm,stdout:
 Sends Hello world with stdout and echo
 hello,srv/hello.wasm,stdout:,echo:
 rec,srv/rec.wasm,stdout:,rec:
+hi,srv/hi.wasm,stdout:,echo:

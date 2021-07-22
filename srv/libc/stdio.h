@@ -8,18 +8,13 @@ static inline void putbytes(const uint8_t *data, size_t len) {
     srv_send("stdout:", data, len);
 }
 
-static inline int putstr(const char* s) {
-    int len = strlen(s);
-    putbytes((const uint8_t *)s, len);
-    return len;
-}
 static inline int puts(const char* s) {
-    int len = putstr(s);
-    putstr("\n");
-    return len;
+    struct iovec iovs[2] = {
+        {(void*)s, strlen(s)}, {(void*)"\n", 1}
+    };
+    size_t trash;
+    return srv_sendv("stdout:", iovs, 2, &trash);
 }
-/** Compile-time puts(const char*) */
-#define PUTS(s) putstr(s"\n");
 
 #define SEND_BUF_SIZE 128
 static inline void _putchar(char ch) {

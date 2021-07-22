@@ -11,28 +11,33 @@ Processes are [WASM](https://webassembly.org/) binary converted to safe native a
 * LLVM toolchain - `clang`, `lld`, `wasm-ld`
 * QEMU - `x86_64`, `ovmf`
 * [WASM3](https://github.com/wasm3/wasm3)
+* [WASI SDK](https://github.com/WebAssembly/wasi-sdk)
 * Love and insomnia
 
-This proof-of-concept version is built in C and assembly. Further versions may be implemented in Rust to enjoy safety and lastest WebAssembly improvements.
+This proof-of-concept version is built in C and assembly. Further versions may be implemented in Rust to enjoy safety and latest WebAssembly improvements.
 
 ## Features
 
+* WASI stdout
 * Wasm interpreter
 * Service manager
 * VGA graphics
 * ELF kernel
 * UEFIx64 loader
 
-### TODO
+### Planned
 
 * Scheduling
-* WASI
+* WASI full support
 * Multi-core
+* Wapt client
+    * TCP/IP stack
 
-### MAYBE
+### Ideas
 
 * Zero-copy srv_send
 * GRUB Multiboot2
+* GUI
 
 ## Getting started
 
@@ -70,7 +75,7 @@ make iso
 * include/ - Shared structures declarations
 * kernel/ - OS core
     * libc/ - Minimal C library
-    * wax/ - WebAssebly eXecution using WASM3
+    * wasm/ - WebAssebly eXecution using WASM3
 * loader/ - Boot loaders
 * srv/ - Wasm services aka `driverspace`
 

@@ -21,7 +21,10 @@ typedef struct m3_wasi_context_t
 
 M3Result    m3_LinkWASI     (IM3Module io_module);
 
-m3_wasi_context_t* m3_GetWasiContext();
+m3_wasi_context_t* m3_GetWasiContext(IM3Runtime io_runtime);
+
+m3ApiRawFunction(m3_srv_send);
+m3ApiRawFunction(m3_srv_sendv);
 
 d_m3EndExternC
 

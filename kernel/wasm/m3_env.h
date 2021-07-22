@@ -169,6 +169,8 @@ typedef struct M3Runtime
 
     void *                  userdata;
 
+    void *                  wasiContext;
+
     M3Memory                memory;
     u32                     memoryLimit;
 

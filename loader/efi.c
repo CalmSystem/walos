@@ -212,12 +212,12 @@ static inline SERVICE_TABLE load_services(char16_t* idx_path) {
                 srv->program = load_service_program(path, &pgm);
             }
             if (commas >= 1 && srv->program) {
-                if (!srv->program->rights) {
-                    srv->program->rights = rgt;
-                    srv->program->rights_size = 1;
+                if (!srv->program->rights.ptr) {
+                    srv->program->rights.ptr = rgt;
+                    srv->program->rights.count = 1;
                 } else {
                     rgt++;
-                    srv->program->rights_size++;
+                    srv->program->rights.count++;
                 }
                 rgt->service = p+1;
             }

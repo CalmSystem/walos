@@ -1,5 +1,6 @@
 #include "string.h"
 #include "srv.h"
+#include "errno.h"
 
 SERVICE_TABLE table;
 EXEC_ENGINE *engine;
@@ -43,13 +44,13 @@ int _srv_add(const char* name, PROGRAM* program, EXEC_INST* inst, SERVICE** out)
 int srv_add(const char* name, PROGRAM* program, SERVICE** out) {
     return _srv_add(name, program, NULL, out);
 }
-int srv_add_internal(const char* name, int32_t (*fn)(const char*, const uint8_t*, size_t), SERVICE** out) {
+int srv_add_internal(const char* name, ssize_t (*fn)(const char*, struct iovec*, size_t), SERVICE** out) {
     return _srv_add(name, INTERNAL_PROG, fn, out);
 }
 
-static inline int has_right(PROGRAM* p, const char* srv, size_t srvlen, const char* path) {
-    for (size_t i = 0; i < p->rights_size; i++) {
-        PROGRAM_RIGHT* r = p->rights+i;
+static inline int has_right(const PROGRAM_RIGHTS* p, const char* srv, size_t srvlen, const char* path) {
+    for (size_t i = 0; i < p->count; i++) {
+        PROGRAM_RIGHT* r = p->ptr+i;
         if (strncmp(r->service, srv, srvlen) == 0 &&
             strlen(r->service) == srvlen &&
             strcmp(r->path, path) == 0)
@@ -58,12 +59,12 @@ static inline int has_right(PROGRAM* p, const char* srv, size_t srvlen, const ch
     return -1;
 }
 
-int srv_send(const char *path, const uint8_t *data, size_t len, PROGRAM* emitter) {
+ssize_t service_send(const char *path, struct iovec *iovec, size_t iovcnt, const PROGRAM_RIGHTS* rights) {
     char* sep = strchr(path, SRV_SEPARATOR);
     if (sep == NULL) return -2;
 
     uint32_t srvlen = sep-path;
-    if (emitter && !has_right(emitter, path, srvlen, sep+1))
+    if (rights && !has_right(rights, path, srvlen, sep+1))
         return -2;
 
     SERVICE* srv = srv_findn(path, srvlen);
@@ -71,7 +72,7 @@ int srv_send(const char *path, const uint8_t *data, size_t len, PROGRAM* emitter
 
     if (srv->program == INTERNAL_PROG) {
         if (srv->instance == NULL) return -3;
-        return ((int32_t (*)(const char*, const uint8_t*, size_t))srv->instance)(sep+1, data, len);
+        return ((ssize_t (*)(const char*, struct iovec*, size_t))srv->instance)(sep+1, iovec, iovcnt);
     } else {
         if (srv->instance == NULL) {
             srv->instance = engine->srv_load(engine, srv->program);
@@ -79,7 +80,6 @@ int srv_send(const char *path, const uint8_t *data, size_t len, PROGRAM* emitter
         }
         if (srv->instance == BAD_EXEC_INST) return -3;
 
-        int ret = engine->srv_call(srv->instance, sep+1, data, len);
-        return ret < 0 && ret > -4 ? -4 : ret;
+        return engine->srv_call(srv->instance, sep+1, iovec, iovcnt);
     }
 }
