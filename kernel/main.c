@@ -6,6 +6,7 @@
 #include "asm.h"
 #include "acpi.h"
 #include "pci.h"
+#include "net/net.h"
 #include "syslog.h"
 
 void pci_list(const struct pci_device_info* info) {
@@ -23,7 +24,7 @@ void _start(BOOT_INFO* bootinfo) {
     interrupts_setup();
 
     if (bootinfo->lfb && bootinfo->font) {
-    graphics_use_lfb(bootinfo->lfb, bootinfo->font);
+        graphics_use_lfb(bootinfo->lfb, bootinfo->font);
         syslogs((syslog_ctx){"GRAPHICS", NULL, INFO}, "LFB Ready");
         syslog_handlers = &syslog_graphics_handler;
         syslogs((syslog_ctx){"LOG", NULL, DEBUG}, "Using graphics");
@@ -48,8 +49,14 @@ void _start(BOOT_INFO* bootinfo) {
         syslogs((syslog_ctx){"APIC", NULL, WARN}, "Not available");
     }
 
-    syslogs((syslog_ctx){"PCI", NULL, INFO}, "Scanning");
-    pci_scan(NULL, 0, pci_list);
+    net_init(true);
+    {
+        struct pci_driver pci_drivers[] = {
+            ethernet_pci_driver
+        };
+        syslogs((syslog_ctx){"PCI", NULL, INFO}, "Scanning");
+        pci_scan(&pci_drivers[0], sizeof(pci_drivers) / sizeof(pci_drivers[0]), pci_list);
+    }
 
     EXEC_ENGINE *engine = exec_load_m3();
     if (engine) {
@@ -61,7 +68,7 @@ void _start(BOOT_INFO* bootinfo) {
 
     if (bootinfo->services.ptr) {
         srv_setup(bootinfo->services, engine);
-    srv_register_builtin();
+        srv_register_builtin();
     }
 
     puts("Go !!!");
@@ -70,6 +77,8 @@ void _start(BOOT_INFO* bootinfo) {
     else printf("got %d\n", res);
 
     while(1) {
+        net_pull();
+
         preempt_force();
     }
 }

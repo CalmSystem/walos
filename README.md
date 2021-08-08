@@ -12,14 +12,16 @@ Processes are [WASM](https://webassembly.org/) binary converted to safe native a
 * QEMU - `x86_64`, `ovmf`
 * [WASM3](https://github.com/wasm3/wasm3)
 * [WASI SDK](https://github.com/WebAssembly/wasi-sdk)
+* [LwIP](https://lwip.fandom.com)
 * Love and insomnia
 
 This proof-of-concept version is built in C and assembly. Further versions may be implemented in Rust to enjoy safety and latest WebAssembly improvements.
 
 ## Features
 
-* WASI stdout
-* Wasm interpreter
+* Networking
+* Partial WASI support
+* WASM interpreter
 * Service manager
 * VGA graphics
 * ELF kernel
@@ -27,17 +29,17 @@ This proof-of-concept version is built in C and assembly. Further versions may b
 
 ### Planned
 
+* Full WASI support
 * Scheduling
-* WASI full support
 * Multi-core
 * Wapt client
-    * TCP/IP stack
 
 ### Ideas
 
 * Zero-copy srv_send
 * GRUB Multiboot2
 * GUI
+* Custom network stack
 
 ## Getting started
 
@@ -47,6 +49,8 @@ OS | Needed | Optional | Export
 -- | -- | -- | --
 Debian / Ubuntu | `make qemu-system ovmf clang lld` | `mtools xorriso`
 Arch / Manjaro | `make qemu edk2-ovmf clang lld` | `mtools libisoburn` | `OVMF=/usr/share/ovmf/x64/OVMF.fd`
+
+`Executable "wasm-ld" doesn't exist!`: Try `export PATH=$PATH:/usr/lib/llvm-10/bin`
 
 ### Setup
 
@@ -75,7 +79,8 @@ make iso
 * include/ - Shared structures declarations
 * kernel/ - OS core
     * libc/ - Minimal C library
-    * wasm/ - WebAssebly eXecution using WASM3
+    * wasm/ - WebAssebly eXecution using [WASM3](https://github.com/wasm3/wasm3)
+    * net/ - Network stack using [LwIP](https://lwip.fandom.com)
 * loader/ - Boot loaders
 * srv/ - Wasm services aka `driverspace`
 

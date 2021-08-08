@@ -15,7 +15,7 @@ ISO_OUT ?= walos.iso
 
 QEMU ?= qemu-system-$(ARCH)
 OVMF ?= /usr/share/ovmf/OVMF.fd
-QFLAGS := -m 1G -bios $(OVMF) -net none
+QFLAGS := -m 1G -bios $(OVMF)
 QROOT := -drive format=raw,file=fat:rw:$(ROOT_DIR)
 # Old syntax was -usb -usbdevice disk::$(IMG_OUT)
 QIMG := -drive format=raw,if=none,id=stick,file=$(IMG_OUT) \
@@ -38,7 +38,7 @@ K_SRCS := kernel/handlers.S $(call rwildcard,kernel/,*.c)
 K_LDS := kernel/kernel.ld
 K_OBJS := $(K_SRCS:%=$(BUILD_DIR)/%.o)
 K_DEPS := $(K_OBJS:.o=.d)
-K_INCS := -Iinclude -Ikernel/libc
+K_INCS := -Iinclude -Ikernel/libc -Ikernel/net/include
 K_OUT := $(ROOT_DIR)/boot/kernel.elf
 K_CFLAGS := $(CFLAGS) -target $(ARCH)-unknown-elf -O3 -flto=thin
 K_LDFLAGS := -flavor ld -T $(K_LDS) -static -Bsymbolic -nostdlib -z max-page-size=0x1000 -strip-all
