@@ -305,6 +305,20 @@ static inline EFI_STATUS load_gop(LINEAR_FRAMEBUFFER* out) {
     return EFI_SUCCESS;
 }
 
+static inline void* load_acpi() {
+    EFI_GUID v2 = EFI_ACPI_20_TABLE_GUID;
+    for (uintn_t i = 0; i < system_table->NumberOfTableEntries; i++) {
+        if (memcmp(&system_table->ConfigurationTable[i].VendorGuid, &v2, sizeof(v2)) == 0)
+            return system_table->ConfigurationTable[i].VendorTable;
+    }
+    EFI_GUID v1 = EFI_ACPI_10_TABLE_GUID;
+    for (uintn_t i = 0; i < system_table->NumberOfTableEntries; i++) {
+        if (memcmp(&system_table->ConfigurationTable[i].VendorGuid, &v1, sizeof(v1)) == 0)
+            return system_table->ConfigurationTable[i].VendorTable;
+    }
+    return NULL;
+}
+
 EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
     system_table = st;
     image_handle = ih;
@@ -317,6 +331,9 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
     if (!kernel_entry) return EFI_SUCCESS;
 
     println(L"Kernel: Loaded");
+
+    bootinfo.acpi_rsdp = load_acpi();
+    if (bootinfo.acpi_rsdp) println(L"ACPI: Loaded");
 
     bootinfo.font = load_psf1_font(WSTR(FONT_PATH));
     if (bootinfo.font) println(L"Font: Loaded");

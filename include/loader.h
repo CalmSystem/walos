@@ -19,6 +19,7 @@ typedef struct {
     PSF1_FONT* font;
     EFI_MEMORY_MAP* mmap;
     SERVICE_TABLE services;
+    void* acpi_rsdp;
 } BOOT_INFO;
 
 #endif
