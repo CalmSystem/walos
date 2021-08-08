@@ -1,5 +1,5 @@
 #include "interrupt.h"
-#include "stdint.h"
+#include "asm.h"
 #include "stdbool.h"
 #include "stdio.h"
 
@@ -15,10 +15,6 @@ struct idt_entry_t {
 } __attribute__((packed));
 struct idt_entry_t idt[256] = {0};
 
-struct idtr_t {
-    uint16_t size;
-    uintptr_t offset;
-} __attribute__((packed));
 struct idtr_t idt_descriptor = {
     .size = sizeof(idt),
     .offset = (uint64_t)&idt[0],
@@ -59,7 +55,7 @@ void trap_handler(uint64_t trapno, uint64_t error_code) {
     putbytes_at("\n----------------------------\n\n", 31, &pb_state);
 }
 
-void set_interrupt(uint8_t i, uint8_t attrs, uint64_t addr) {
+void interrupt_set_handler(uint8_t i, uint8_t attrs, uint64_t addr) {
     idt[i].ptr_low = addr;
     idt[i].ptr_middle = addr >> 16;
     idt[i].ptr_high = addr >> 32;
@@ -71,48 +67,47 @@ void set_interrupt(uint8_t i, uint8_t attrs, uint64_t addr) {
     idt[i].reserved = 0;
 }
 
+#define IRQ_HIGH 8
 #define QUARTZ 0x1234DD
-#define SCHEDFREQ 50
-#define CLOCKFREQ 200
 
-static inline void outb(unsigned char value, unsigned short port) {
-    __asm__ __volatile__("outb %0, %1" : : "a" (value), "Nd" (port));
-}
-static inline unsigned char inb(unsigned short port) {
-    unsigned char rega;
-    __asm__ __volatile__("inb %1,%0" : "=a" (rega) : "Nd" (port));
-    return rega;
-}
+/* IO base address for master PIC */
+#define PIC1_CMND 0x20
+#define PIC1_DATA 0x21
+/* IO base address for slave PIC */
+#define PIC2_CMND 0xA0
+#define PIC2_DATA 0xA1
 
-static void load_pic() {
+#define PIC_EOI 0x20 /* End-of-interrupt command code */
+
+static void pic_setup() {
     /* Initialize the master. */
-    outb(0x11, 0x20);
-    outb(0x20, 0x21);
-    outb(0x4, 0x21);
-    outb(0x1, 0x21);
+    io_write8(PIC1_CMND, 0x11);
+    io_write8(PIC1_DATA, 0x20);
+    io_write8(PIC1_DATA, 0x4);
+    io_write8(PIC1_DATA, 0x1);
     /* Initialize the slave. */
-    outb(0x11, 0xa0);
-    outb(0x28, 0xa1);
-    outb(0x2, 0xa1);
-    outb(0x1, 0xa1);
+    io_write8(PIC2_CMND, 0x11);
+    io_write8(PIC2_DATA, 0x28);
+    io_write8(PIC2_DATA, 0x2);
+    io_write8(PIC2_DATA, 0x1);
     /* Ack any bogus intrs by setting the End Of Interrupt bit. */
-    outb(0x20, 0x20);
-    outb(0x20, 0xa0);
-    /* Disable all IRQs */
-    outb(0xff, 0x21);
-    outb(0xff, 0xa1);
+    irq_accept(IRQ_HIGH);
+    /* Disable all Is*/
+    io_write8(PIC1_DATA, 0xff);
+    io_write8(PIC2_DATA, 0xff);
 }
-static void load_pit() {
-    const int interval = QUARTZ / CLOCKFREQ;
-    outb(0x34, 0x43);
-    outb(interval % 256, 0x40);
-    outb(interval / 256, 0x40);
+
+static void pit_setup() {
+    const int interval = QUARTZ / PIT_FREQ;
+    io_write8(0x43, 0x34);
+    io_write8(0x40, interval % 256);
+    io_write8(0x40, interval / 256);
 }
 unsigned long pit_count = 0;
 void tic_PIT() {
-    outb(0x20, 0x20);
+    irq_accept(0);
     pit_count++;
-    const unsigned long seconds = pit_count / CLOCKFREQ;
+    const unsigned long seconds = pit_count / PIT_FREQ;
     char time_str[9]; // space for "HH:MM:SS\0"
     sprintf(time_str, "%02ld:%02ld:%02ld", seconds / (60 * 60), (seconds / 60) % 60, seconds % 60);
     PUTBYTES_STATE pb_state = {
@@ -125,36 +120,45 @@ void tic_PIT() {
     putbytes_at(time_str, 8, &pb_state);
 }
 extern void IT_PIT_handler();
+unsigned long pit_get_count() { return pit_count; }
 
-void enable_irq(uint8_t irq, bool on) {
-    uint32_t dataport = 0x21;
-    if (irq >= 8) {
-        dataport = 0xA1;
-        irq -= 8;
+void irq_enable(uint8_t irq, bool on) {
+    uint32_t dataport = PIC1_DATA;
+    if (irq >= IRQ_HIGH) {
+        dataport = PIC2_DATA;
+        irq -= IRQ_HIGH;
     }
-    uint8_t masks = inb(dataport);
+    uint8_t masks = io_read8(dataport);
     // Set bit irq to !on
     masks = (masks & ~(1UL << irq)) | ((!on) << irq);
-    outb(masks, dataport);
+    io_write8(dataport, masks);
+}
+/* End-of-interrupt command code */
+#define PIC_EOI 0x20
+void irq_accept(uint8_t irq) {
+    if (irq >= IRQ_HIGH)
+        io_write8(PIC2_CMND, PIC_EOI);
+
+    io_write8(PIC1_CMND, PIC_EOI);
 }
 
 void interrupts_setup() {
 
-    __asm__ __volatile__("cli":::"memory");
+    cli();
 
     for (uint32_t i = 0; i < sizeof(idt)/sizeof(idt[0]); i++) {
         idt[i].attributes = 0xE;
     }
     for (uint8_t i = 0; i < sizeof(exception_handlers)/sizeof(exception_handlers[0]); i++) {
-        set_interrupt(i, INTGATE, exception_handlers[i]);
+        interrupt_set_handler(i, INTGATE, exception_handlers[i]);
     }
 
-    load_pic();
+    pic_setup();
 
-    set_interrupt(32, INTGATE, (uint64_t)IT_PIT_handler);
-    load_pit();
-    enable_irq(0, true);
+    interrupt_set_handler(32, INTGATE, (uint64_t)IT_PIT_handler);
+    pit_setup();
+    irq_enable(0, true);
 
-    __asm__ volatile ("lidt (%0)" : : "r" (&idt_descriptor));
+    idt_load(&idt_descriptor);
 
 }

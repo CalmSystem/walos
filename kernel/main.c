@@ -3,40 +3,48 @@
 #include "interrupt.h"
 #include "srv_builtin.h"
 #include "stdio.h"
+#include "syslog.h"
 
 void _start(BOOT_INFO* bootinfo) {
 
     interrupts_setup();
 
-    if (bootinfo->lfb && bootinfo->font)
+    if (bootinfo->lfb && bootinfo->font) {
     graphics_use_lfb(bootinfo->lfb, bootinfo->font);
-    else graphics_use_dummy();
+        syslogs((syslog_ctx){"GRAPHICS", NULL, INFO}, "LFB Ready");
+        syslog_handlers = &syslog_graphics_handler;
+        syslogs((syslog_ctx){"LOG", NULL, DEBUG}, "Using graphics");
+    } else {
+        graphics_use_dummy();
+        syslogs((syslog_ctx){"GRAPHICS", NULL, ERROR}, "Can not setup");
+        syslog_handlers = &syslog_serial_handler;
+        syslogs((syslog_ctx){"LOG", NULL, DEBUG}, "Using serial");
+    }
+    syslogs((syslog_ctx){"LOG", NULL, INFO}, "Ready");
 
-    puts("Hello Walos !\n...");
+    syslogs((syslog_ctx){"OS", NULL, INFO}, "Hello Walos !");
 
     memory_setup(bootinfo->mmap);
 
     EXEC_ENGINE *engine = exec_load_m3();
-    assert(engine && "Failed to load WASM runtime");
-    puts("Engine: Loaded");
+    if (engine) {
+        syslogs((syslog_ctx){"WASM", NULL, INFO}, "Engine loaded");
+    } else {
+        syslogs((syslog_ctx){"WASM", NULL, FATAL}, "Failed to load engine");
+        return;
+    }
 
-    if (bootinfo->services.ptr) srv_use(bootinfo->services, engine);
-
+    if (bootinfo->services.ptr) {
+        srv_setup(bootinfo->services, engine);
     srv_register_builtin();
+    }
 
     puts("Go !!!");
     int res = service_send("hi:", NULL, 0, NULL);
     if (res < 0) printf("err -%d\n", -res);
     else printf("got %d\n", res);
 
-    struct iovec iov = { "9\n", 3 };
-    res = service_send("rec:", &iov, 1, NULL);
-    if (res < 0) printf("err -%d", -res);
-    else printf("got %d\n", res);
-
     while(1) {
-        __asm__ __volatile__("sti":::"memory");
-        __asm__ __volatile__("hlt":::"memory");
-        __asm__ __volatile__("cli":::"memory");
+        preempt_force();
     }
 }

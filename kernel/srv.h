@@ -6,7 +6,7 @@
 #include "wasm/wax.h"
 
 /** Setup services table and runtime engine */
-void srv_use(SERVICE_TABLE st, EXEC_ENGINE* engine);
+void srv_setup(SERVICE_TABLE st, EXEC_ENGINE* engine);
 
 SERVICE *srv_find(const char *name);
 SERVICE *srv_findn(const char *path, size_t name_len);

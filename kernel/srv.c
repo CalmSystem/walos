@@ -5,7 +5,7 @@
 SERVICE_TABLE table;
 EXEC_ENGINE *engine;
 
-void srv_use(SERVICE_TABLE st, EXEC_ENGINE* eg) {
+void srv_setup(SERVICE_TABLE st, EXEC_ENGINE* eg) {
     table = st;
     engine = eg;
 }

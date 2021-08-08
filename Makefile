@@ -33,13 +33,14 @@ EFI_OUT := $(ROOT_DIR)/efi/boot/bootx64.efi
 EFI_CFLAGS := $(CFLAGS) -target $(ARCH)-unknown-windows -O2
 EFI_LDFLAGS := -flavor link -subsystem:efi_application -entry:efi_main
 
-K_SRCS := $(wildcard kernel/*.c kernel/**/*.c kernel/*.S)
+rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+K_SRCS := kernel/handlers.S $(call rwildcard,kernel/,*.c)
 K_LDS := kernel/kernel.ld
 K_OBJS := $(K_SRCS:%=$(BUILD_DIR)/%.o)
 K_DEPS := $(K_OBJS:.o=.d)
 K_INCS := -Iinclude -Ikernel/libc
 K_OUT := $(ROOT_DIR)/boot/kernel.elf
-K_CFLAGS := $(CFLAGS) -target $(ARCH)-unknown-elf -O3
+K_CFLAGS := $(CFLAGS) -target $(ARCH)-unknown-elf -O3 -flto=thin
 K_LDFLAGS := -flavor ld -T $(K_LDS) -static -Bsymbolic -nostdlib -z max-page-size=0x1000 -strip-all
 
 WASM_RAW_FLAGS := --no-standard-libraries -ffreestanding -Wall -Werror -Ofast -target wasm32 -Isrv/libc
@@ -96,13 +97,14 @@ $(ROOT_DIR)/srv/%.wasm: srv/%.wasi.cpp $(WASI_SDK)
 
 -include $(K_DEPS)
 
-MKDIR_P ?= mkdir -p
+MKDIR_P ?= @mkdir -p
 
 .PHONY: clean all default qemu
 
 root: bin $(EFI_OUT) $(K_OUT) $(SRV_OUTS)
 	cp -r bin/* $(ROOT_DIR)
 
+root/debug: K_CFLAGS := $(filter-out -O3 -flto=thin,$(K_CFLAGS))
 root/debug: K_CFLAGS += -g -ggdb -O1
 root/debug: K_LDFLAGS := $(filter-out -strip-all,$(K_LDFLAGS))
 root/debug: root

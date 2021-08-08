@@ -3,6 +3,7 @@
 #include "../srv.h"
 #include "string.h"
 #include "stdio.h"
+#include "../syslog.h"
 
 struct exec_m3_t {
     EXEC_ENGINE handle;
@@ -13,7 +14,10 @@ EXEC_INST* m3_srv_load(EXEC_ENGINE* self, PROGRAM* p) {
 
     IM3Environment env = ((struct exec_m3_t*)self)->env;
     IM3Runtime runtime = m3_NewRuntime(env, 2048, p);
-    if (!runtime) { puts("m3_load: failed to load runtime"); return NULL; }
+    if (!runtime) {
+        syslogs((syslog_ctx){"WASM", "m3\0load\0", ERROR}, "Failed to load runtime");
+        return NULL;
+    }
 
     M3Result res;
     IM3Module mod;
@@ -60,7 +64,7 @@ EXEC_INST* m3_srv_load(EXEC_ENGINE* self, PROGRAM* p) {
     return (EXEC_INST*)runtime;
 
 err:
-    printf("m3_load: %s\n", res);
+    syslogs((syslog_ctx){"WASM", "m3\0load\0", ERROR}, res);
     m3_FreeRuntime(runtime);
     return NULL;
 }
@@ -117,7 +121,7 @@ ssize_t m3_srv_call(EXEC_INST* inst, const char* sub, struct iovec *iov, size_t 
 
     return ret;
 err:
-    printf("m3_call: %s\n", res);
+    syslogs((syslog_ctx){"WASM", "m3\0call\0", ERROR}, res);
     return -4;
 }
 
