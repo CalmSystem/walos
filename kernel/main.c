@@ -5,7 +5,18 @@
 #include "stdio.h"
 #include "asm.h"
 #include "acpi.h"
+#include "pci.h"
 #include "syslog.h"
+
+void pci_list(const struct pci_device_info* info) {
+    uint8_t bus, dev, func;
+    pci_split_id(info->pciId, &bus, &dev, &func);
+    char sub[11] = {0};
+    snprintf(sub, 10, "%02x:%02x:%d", bus, dev, func);
+    syslogf((syslog_ctx){"PCI", sub, DEBUG}, "Found 0x%04x/0x%04x: %s",
+        info->vendorId, info->deviceId,
+        pci_class_name(pci_pack_class(info->baseclass, info->subclass), info->progIf));
+}
 
 void _start(BOOT_INFO* bootinfo) {
 
@@ -36,6 +47,9 @@ void _start(BOOT_INFO* bootinfo) {
     } else {
         syslogs((syslog_ctx){"APIC", NULL, WARN}, "Not available");
     }
+
+    syslogs((syslog_ctx){"PCI", NULL, INFO}, "Scanning");
+    pci_scan(NULL, 0, pci_list);
 
     EXEC_ENGINE *engine = exec_load_m3();
     if (engine) {
