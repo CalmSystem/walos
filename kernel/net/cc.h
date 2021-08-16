@@ -14,4 +14,6 @@ typedef preempt_lock_t sys_prot_t;
 
 #define LWIP_RAND() ((u32_t)rand())
 
+#define SZT_F "lu"
+
 #endif

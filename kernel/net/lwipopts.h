@@ -6,5 +6,6 @@
 #define LWIP_NETCONN 0
 #define LWIP_DNS 1
 #define LWIP_DHCP 1
+#define LWIP_NETIF_STATUS_CALLBACK 1
 
 #endif

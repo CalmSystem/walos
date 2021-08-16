@@ -160,6 +160,7 @@ ethernetif_init(struct netif *netif)
 }
 
 err_t (*ethernetif_up_callback)(struct netif *netif) = NULL;
+netif_status_callback_fn ethernetif_status_callback = NULL;
 
 static void ethernet_pci_handle(const struct pci_device_info* info) {
 #if !LWIP_SINGLE_NETIF
@@ -191,7 +192,10 @@ static void ethernet_pci_handle(const struct pci_device_info* info) {
 #if LWIP_IPV6
   netif_create_ip6_linklocal_address(netif, 1);
   netif->ip6_autoconfig_enabled = 1;
-  netif_set_status_callback(netif, netif_status_callback);
+#endif
+#if LWIP_NETIF_STATUS_CALLBACK
+  if (ethernetif_status_callback)
+    netif_set_status_callback(netif, ethernetif_status_callback);
 #endif
   netif_set_default(netif);
   netif_set_up(netif);

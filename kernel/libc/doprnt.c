@@ -262,8 +262,10 @@ void _doprnt(fmt, args, radix, putc, putc_arg)
 		}
 	    }
 
-	    if (*fmt == 'l')
-		fmt++;	/* need it if sizeof(int) < sizeof(long) */
+	    if (*fmt == 'l' || *fmt == 'z') {
+			fmt++; /* need it if sizeof(int) < sizeof(long) */
+			if (*fmt == 'l') fmt++;
+		}
 
 	    truncate = FALSE;
 #ifdef DOPRNT_FLOATS

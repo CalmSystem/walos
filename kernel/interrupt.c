@@ -122,6 +122,8 @@ void tic_PIT() {
 extern void IT_PIT_handler();
 unsigned long pit_get_count() { return pit_count; }
 
+extern void IT_FLOPPY_handler();
+
 void irq_enable(uint8_t irq, bool on) {
     uint32_t dataport = PIC1_DATA;
     if (irq >= IRQ_HIGH) {
@@ -158,6 +160,9 @@ void interrupts_setup() {
     interrupt_set_handler(32, INTGATE, (uint64_t)IT_PIT_handler);
     pit_setup();
     irq_enable(0, true);
+
+    interrupt_set_handler(38, INTGATE, (uint64_t)IT_FLOPPY_handler);
+    irq_enable(6, true);
 
     idt_load(&idt_descriptor);
 

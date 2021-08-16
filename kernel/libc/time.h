@@ -11,8 +11,9 @@
 # define CLOCK_THREAD_CPUTIME_ID	3
 
 typedef int clockid_t;
+typedef long long time_t;
 struct timespec {
-	long	tv_sec;			/* seconds */
+	time_t	tv_sec;			/* seconds */
 	long	tv_nsec;		/* nanoseconds */
 };
 

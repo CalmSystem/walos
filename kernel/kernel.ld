@@ -20,6 +20,10 @@ SECTIONS {
 	}
 	_kernel_end = .;
 
+	/* Direct memory access */
+	floppy_dmabuf = 0x8000;
+	floppy_dmalen = 0x4800;
+
 	/DISCARD/ : {
 		*(.comment)
 	}

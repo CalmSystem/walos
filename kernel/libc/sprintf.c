@@ -55,13 +55,10 @@ savechar(char *arg, int c)
 {
 	struct sprintf_state *state = (struct sprintf_state *)arg;
 	
-	if (state->max != SPRINTF_UNLIMITED)
-	{
-		if (state->len == state->max)
-			return;
-	}
-
 	state->len++;
+	if (state->max != SPRINTF_UNLIMITED && state->len > state->max)
+		return;
+
 	*state->buf = c;
 	state->buf++;
 }

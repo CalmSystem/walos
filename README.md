@@ -1,4 +1,6 @@
-# walos
+# walos: `mono_wasi` branch
+
+A monolithic kernel implementing WASI compliant runtime on bare-metal.
 
 WebAssembly Language based Operating System is a toy OS using the [Language-based System](https://en.wikipedia.org/wiki/Language-based_system) approach. Unlike standard OS, walos ignores hardware protection (Ring0, single address space). This idea simplifies the system architecture and improves performance by avoiding syscalls.
 
@@ -19,6 +21,7 @@ This proof-of-concept version is built in C and assembly. Further versions may b
 
 ## Features
 
+* FileSystem
 * Networking
 * Partial WASI support
 * WASM interpreter

@@ -88,3 +88,4 @@ IT_##kind##_handler: \
 	iretq
 
 IT_HANDLER(PIT, tic_PIT)
+IT_HANDLER(FLOPPY, floppy_IT)

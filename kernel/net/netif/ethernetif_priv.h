@@ -8,6 +8,7 @@
 err_t ethernetif_init(struct netif *netif);
 void ethernetif_input(struct netif *netif);
 extern err_t (*ethernetif_up_callback)(struct netif *netif);
+extern netif_status_callback_fn ethernetif_status_callback;
 
 void ethernet_log(const struct pci_device_info *info, const char *msg);
 

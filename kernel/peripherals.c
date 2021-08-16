@@ -1,144 +1,69 @@
 #include "peripherals.h"
 #include "asm.h"
+#include "sys/time8.h"
 
 #define CMOS_CMD_PORT 0x70
 #define CMOS_DTA_PORT 0x71
-static inline uint8_t cmos_read(uint16_t reg) {
+uint8_t cmos_read(uint16_t reg) {
 	preempt_lock_t lock;
-    preempt_disable(&lock);
+	preempt_disable(&lock);
 	io_write8(CMOS_CMD_PORT, reg | 0x80);
 	uint8_t value = io_read8(CMOS_DTA_PORT);
-    preempt_release(lock);
-    return value;
+	preempt_release(lock);
+	return value;
 }
 
 static inline int rtc_update_in_progress() {
-    return cmos_read(0x0A) & 0x80;
+	return cmos_read(0x0A) & 0x80;
 }
 
-void rtc_read(struct u8_datetime_t* time) {
-    if (!time) return;
+struct tm8_t* rtc_get(struct tm8_t* time) {
+	if (!time) return 0;
 
-    struct u8_datetime_t last;
-    uint8_t registerB;
+	struct tm8_t last;
+	uint8_t registerB;
 
-    // Note: This uses the "read registers until you get the same values twice in a row" technique
-    //       to avoid getting dodgy/inconsistent values due to RTC updates
+	// Note: This uses the "read registers until you get the same values twice in a row" technique
+	//       to avoid getting dodgy/inconsistent values due to RTC updates
 
-    do {
-        last = *time;
+	uint8_t cnt = 0;
+	do {
+		if (cnt > 199) return 0;
+		last = *time;
 
-        while (rtc_update_in_progress())
-            ; // Make sure an update isn't in progress
-        time->second = cmos_read(0x00);
-        time->minute = cmos_read(0x02);
-        time->hour = cmos_read(0x04);
-        time->day = cmos_read(0x07);
-        time->month = cmos_read(0x08);
-        time->year = cmos_read(0x09);
-        time->century = cmos_read(0x32);
+		while (rtc_update_in_progress())
+			; // Make sure an update isn't in progress
+		time->second = cmos_read(0x00);
+		time->minute = cmos_read(0x02);
+		time->hour = cmos_read(0x04);
+		time->day = cmos_read(0x07);
+		time->month = cmos_read(0x08);
+		time->year = cmos_read(0x09);
+		time->century = cmos_read(0x32);
 
-        registerB = cmos_read(0x0B);
-    } while ((last.second != time->second) || (last.minute != time->minute) || (last.hour != time->hour) ||
-             (last.day != time->day) || (last.month != time->month) || (last.year != time->year) ||
-             (last.century != time->century));
+		registerB = cmos_read(0x0B);
+		cnt++;
+	} while ((last.second != time->second) || (last.minute != time->minute) || (last.hour != time->hour) ||
+			 (last.day != time->day) || (last.month != time->month) || (last.year != time->year) ||
+			 (last.century != time->century));
 
-    // Convert BCD to binary values if necessary
-    if (!(registerB & 0x04)) {
-        time->second = (time->second & 0x0F) + ((time->second / 16) * 10);
-        time->minute = (time->minute & 0x0F) + ((time->minute / 16) * 10);
-        time->hour = ((time->hour & 0x0F) + (((time->hour & 0x70) / 16) * 10)) | (time->hour & 0x80);
-        time->day = (time->day & 0x0F) + ((time->day / 16) * 10);
-        time->month = (time->month & 0x0F) + ((time->month / 16) * 10);
-        time->year = (time->year & 0x0F) + ((time->year / 16) * 10);
-        time->century = (time->century & 0x0F) + ((time->century / 16) * 10);
-    }
-
-    // Convert 12 hour clock to 24 hour clock if necessary
-    if (!(registerB & 0x02) && (time->hour & 0x80)) {
-        time->hour = ((time->hour & 0x7F) + 12) % 24;
-    }
-
-    // Calculate the full (4-digit) year
-    time->year += time->century * 100;
-
-}
-
-static inline long long __year_to_secs(long long year, int *is_leap) {
-	if (year-2ULL <= 136) {
-		int y = year;
-		int leaps = (y-68)>>2;
-		if (!((y-68)&3)) {
-			leaps--;
-			if (is_leap) *is_leap = 1;
-		} else if (is_leap) *is_leap = 0;
-		return 31536000*(y-70) + 86400*leaps;
+	// Convert BCD to binary values if necessary
+	if (!(registerB & 0x04)) {
+		time->second = (time->second & 0x0F) + ((time->second / 16) * 10);
+		time->minute = (time->minute & 0x0F) + ((time->minute / 16) * 10);
+		time->hour = ((time->hour & 0x0F) + (((time->hour & 0x70) / 16) * 10)) | (time->hour & 0x80);
+		time->day = (time->day & 0x0F) + ((time->day / 16) * 10);
+		time->month = (time->month & 0x0F) + ((time->month / 16) * 10);
+		time->year = (time->year & 0x0F) + ((time->year / 16) * 10);
+		time->century = (time->century & 0x0F) + ((time->century / 16) * 10);
 	}
 
-	int cycles, centuries, leaps, rem;
-
-	if (!is_leap) is_leap = &(int){0};
-	cycles = (year-100) / 400;
-	rem = (year-100) % 400;
-	if (rem < 0) {
-		cycles--;
-		rem += 400;
-	}
-	if (!rem) {
-		*is_leap = 1;
-		centuries = 0;
-		leaps = 0;
-	} else {
-		if (rem >= 200) {
-			if (rem >= 300) centuries = 3, rem -= 300;
-			else centuries = 2, rem -= 200;
-		} else {
-			if (rem >= 100) centuries = 1, rem -= 100;
-			else centuries = 0;
-		}
-		if (!rem) {
-			*is_leap = 0;
-			leaps = 0;
-		} else {
-			leaps = rem / 4U;
-			rem %= 4U;
-			*is_leap = !rem;
-		}
+	// Convert 12 hour clock to 24 hour clock if necessary
+	if (!(registerB & 0x02) && (time->hour & 0x80)) {
+		time->hour = ((time->hour & 0x7F) + 12) % 24;
 	}
 
-	leaps += 97*cycles + 24*centuries - *is_leap;
-
-	return (year-100) * 31536000LL + leaps * 86400LL + 946684800 + 86400;
-}
-static inline int __month_to_secs(int month, int is_leap) {
-	static const int secs_through_month[] = {
-		0, 31*86400, 59*86400, 90*86400,
-		120*86400, 151*86400, 181*86400, 212*86400,
-		243*86400, 273*86400, 304*86400, 334*86400 };
-	int t = secs_through_month[month];
-	if (is_leap && month >= 2) t+=86400;
-	return t;
-}
-unsigned long time_u8_to_secs(const struct u8_datetime_t* tm) {
-	int is_leap;
-	long long year = tm->year;
-	int month = tm->month;
-	if (month >= 12 || month < 0) {
-		int adj = month / 12;
-		month %= 12;
-		if (month < 0) {
-			adj--;
-			month += 12;
-		}
-		year += adj;
-	}
-	long long t = __year_to_secs(year, &is_leap);
-	t += __month_to_secs(month, is_leap);
-	t += 86400LL * (tm->day-1);
-	t += 3600LL * tm->hour;
-	t += 60LL * tm->minute;
-	t += tm->second;
-	return t;
+	return time;
 }
 
 static uint32_t z1, z2, z3, z4;
@@ -172,9 +97,8 @@ uint32_t true_rand() {
 	}
 
 	// Fallback
-	struct u8_datetime_t t;
-	rtc_read(&t);
-	INIT_RAND(time_u8_to_secs(&t));
+	struct tm8_t t;
+	INIT_RAND(mktime8(rtc_get(&t)));
 	*(int*)&out = rand();
 	return out;
 }
