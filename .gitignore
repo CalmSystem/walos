@@ -1,0 +1,12 @@
+*.o
+*.d
+*.efi
+*.lib
+*.obj
+*.elf
+*.img
+*.iso
+build
+target
+.envrc
+.vscode
