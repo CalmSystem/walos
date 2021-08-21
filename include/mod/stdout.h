@@ -1,7 +1,7 @@
 #ifndef __MOD_STDOUT_H
 #define __MOD_STDOUT_H
-#include "./common.h"
+#include "./types.h"
 
-W_FN(stdout, write, "i(*i)", int, (struct w_iovec *iov, uintw_t icnt))
+W_FN(stdout, write, "e(Cc)", w_res, (const w_ciovec* ovs, w_size ocnt))
 
 #endif

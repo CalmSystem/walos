@@ -1,4 +1,7 @@
+#ifndef ENTRY_H
+#define ENTRY_H
 #include <kernel/os.h>
+#include <stdint.h>
 
 #define LFB_MAX_HEIGHT 0 // 1080
 #define LFB_RATIO_WIDTH(height) (height*16/9)
@@ -32,11 +35,7 @@ struct efi_memory_map {
 
 /** Pseudo init ramdisk. Just a list of preloaded files */
 struct fake_initrd {
-	struct fake_file {
-		cstr name;
-		uint64_t size;
-		uint8_t* data;
-	}* list;
+	struct loader_srv_file_t* list;
 	uint64_t count;
 };
 
@@ -52,3 +51,5 @@ struct loader_info {
 };
 
 void _start(struct loader_info *info);
+
+#endif

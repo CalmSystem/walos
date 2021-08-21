@@ -135,6 +135,69 @@ static inline void* load_acpi() {
 	return NULL;
 }
 
+static inline void load_initrd(struct fake_initrd* init) {
+	EFI_FILE_PROTOCOL *srv_dir = open_file(NULL, WSTR(SRV_PATH));
+	if (!srv_dir) goto err;
+
+	const uint64_t list_size = get_file_size(srv_dir) / sizeof(struct EFI_FILE_INFO) * sizeof(struct loader_srv_file_t);
+	system_table->BootServices->AllocatePages(AllocateAnyPages, EfiRuntimeServicesData, EFI_TO_PAGES(list_size), (uint64_t*)&init->list);
+	if (!init->list) {
+		srv_dir->Close(srv_dir);
+		goto err;
+	}
+
+	char *name_buffer = NULL;
+	uint64_t name_buffer_len = 0;
+
+	uint8_t buf[2*sizeof(struct EFI_FILE_INFO)];
+	while (1) {
+		for (uintn_t i = 0; i < sizeof(buf); i++) buf[i] = 0;
+		uintn_t size = sizeof(buf);
+		if (srv_dir->Read(srv_dir, &size, buf) & EFI_ERR || size == 0) break;
+		if (size > sizeof(buf)) {
+			print(WSTR("Service name too long: "));
+			printd(size);
+			print(WSTR(""));
+			init->count = 0;
+			return;
+		}
+		struct EFI_FILE_INFO* info = (void*)buf;
+
+		if (info->Attribute & EFI_FILE_DIRECTORY) continue;
+
+		uint64_t name_size;
+		if (strlen_utf8(info->FileName, (sizeof(buf) - sizeof(*info)) / sizeof(char16_t), &name_size) < 0 || !name_size) continue;
+
+		struct loader_srv_file_t *entry = init->list + init->count;
+		if (name_buffer_len <= name_size) {
+			const uint64_t pages = EFI_TO_PAGES(name_size+1);
+			system_table->BootServices->AllocatePages(AllocateAnyPages, EfiRuntimeServicesData, pages, (uint64_t*)&name_buffer);
+			name_buffer_len = pages * 0x1000;
+		}
+		sto_utf8(info->FileName, (sizeof(buf) - sizeof(*info)) / sizeof(char16_t), name_buffer);
+		name_buffer[name_size] = '\0';
+		entry->name = name_buffer;
+		name_buffer += name_size+1;
+		name_buffer_len -= name_size+1;
+		entry->size = info->FileSize;
+		EFI_FILE_PROTOCOL *file = NULL;
+		srv_dir->Open(srv_dir, &file, info->FileName, EFI_FILE_MODE_READ, 0);
+		char *data = NULL;
+		system_table->BootServices->AllocatePages(AllocateAnyPages, EfiRuntimeServicesData, EFI_TO_PAGES(info->FileSize + 1), (EFI_PHYSICAL_ADDRESS *)&data);
+		file->Read(file, &info->FileSize, data);
+		data[info->FileSize] = '\0';
+		entry->data = data;
+		file->Close(file);
+		init->count++;
+	}
+	srv_dir->Close(srv_dir);
+
+	return;
+
+err:
+	println(WSTR("Failed to open services directory"));
+}
+
 EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	system_table = st;
 	image_handle = ih;
@@ -142,25 +205,28 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	println(WSTR("EFI OS Loader"));
 
 	Elf64_Addr kernel_entry = load_kernel(WSTR(K_PATH));
-	if (!kernel_entry) return EFI_SUCCESS;
+	if (!kernel_entry) return EFI_ERR;
 
 	struct loader_info info = {0};
 
 	info.acpi_rsdp = load_acpi();
-	if (!info.acpi_rsdp) return EFI_SUCCESS;
+	if (!info.acpi_rsdp) return EFI_ERR;
 
-	//TODO: load services
+	load_initrd(&info.initrd);
+	if (!info.initrd.count) return EFI_ERR;
 
 	struct linear_frame_buffer gop = {0};
 	if ((load_gop(&gop) & EFI_ERR) == 0) info.lfb = &gop;
 
-	uintn_t map_key;
+	uintn_t map_key = 0;
 	{
 		EFI_MEMORY_DESCRIPTOR *map = NULL;
 		uint32_t desc_version;
-		st->BootServices->GetMemoryMap(&info.mmap.size, map, &map_key, &info.mmap.desc_size, &desc_version);
-		st->BootServices->AllocatePool(EfiLoaderData, info.mmap.size + 2, (void **)&map);
-		st->BootServices->GetMemoryMap(&info.mmap.size, map, &map_key, &info.mmap.desc_size, &desc_version);
+		EFI_STATUS err;
+		while ((err = st->BootServices->GetMemoryMap(&info.mmap.size, map, &map_key, &info.mmap.desc_size, &desc_version)) & EFI_ERR) {
+			if (map) st->BootServices->FreePool(map);
+			st->BootServices->AllocatePool(EfiLoaderData, info.mmap.size, (void **)&map);
+		}
 		info.mmap.ptr = map;
 	}
 

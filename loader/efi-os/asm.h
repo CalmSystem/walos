@@ -1,5 +1,5 @@
-#ifndef __KERNEL_ASM_H
-#define __KERNEL_ASM_H
+#ifndef ASM_H
+#define ASM_H
 
 #include <stdint.h>
 

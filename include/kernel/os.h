@@ -1,15 +1,14 @@
 #ifndef __KERNEL_OS_H
 #define __KERNEL_OS_H
 
-#include "../mod/fn.h"
-#include "../mod/loader.h"
+#include "loader.h"
 
 /** Informations given to os_entry */
 struct os_ctx_t {
-	const module_fn *fns; /* Array of hardware handled functions */
-	uintw_t fncnt; /* Size of fns */
+	struct loader_handle handle;
+	struct loader_features feats;
 };
 
-void os_entry(struct os_ctx_t*);
+void os_entry(const struct os_ctx_t*);
 
 #endif

@@ -15,8 +15,16 @@ Processes and drivers are [WASM](https://webassembly.org/) binary converted to s
 
 ## Features
 
+* WASM runtime
 * Multi ABI kernel
 * UEFIx64 loaders
+
+### Planned
+
+* Logger
+* Multitasking
+* Dependency tree
+* Optional service streaming
 
 ## Getting started
 
@@ -42,11 +50,11 @@ make all
 ```
 3. Start `ENTRY` as **ELF binary**
 ```sh
-make run ENTRY=sample/hello.wasm LOADER=elf
+make run ENTRY=build/sample/hello.wasm LOADER=elf
 ```
 * Start `ENTRY` with **QEMU and OVMF**
 ```sh
-make run ENTRY=sample/hello.wasm
+make run ENTRY=build/sample/hello.wasm
 ```
 * Create a **bootable ISO** using optional prerequisites
 ```sh
@@ -68,7 +76,7 @@ make package ENTRY=sample/hello.wasm
 * srv/ - Modules implementations aka services
 * sample/ - Sample entry points
   * hello/ - Print `Hello world`
-  * hi/ - Display `hi.bmp` on screen
+  * vga/ - Display `wasm.tga` on screen
 
 ### Outputs
 
