@@ -1,10 +1,9 @@
 #ifndef __KERNEL_LOADER_H
 #define __KERNEL_LOADER_H
-#include "./engine.h"
-#include <stdbool.h>
+#include "types.h"
 
 #define PAGE_SIZE 0x1000
-typedef struct{} page_t;
+typedef struct page_t page_t;
 
 struct loader_srv_file_t {
 	cstr name;

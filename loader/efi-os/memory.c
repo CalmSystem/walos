@@ -9,9 +9,9 @@ static struct {
 } pagemap;
 static struct memory_state_t state;
 
-extern void _kernel_start;
-extern void _kernel_end;
-extern void _heap_start;
+extern char _kernel_start;
+extern char _kernel_end;
+extern char _heap_start;
 
 enum EFI_MEMORY_TYPE {
 	EFI_RESERVED_MEMORY = 0x00000000,
@@ -72,7 +72,7 @@ void memory_setup(struct efi_memory_map* m) {
 	state.free = 0;
 
 	for (int i = 0; i < m->size / m->desc_size; i++) {
-		EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)(m->ptr + i * m->desc_size);
+		EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((char*)m->ptr + i * m->desc_size);
 		state.free += desc->numPages;
 		if (desc->type == EFI_CONVENTIONAL_MEMORY && desc->numPages > largest_segment_pages) {
 			largest_segment = desc->physAddr;
@@ -88,7 +88,7 @@ void memory_setup(struct efi_memory_map* m) {
 	pagemap_lock_n(pagemap.ptr, pagemap_pages);
 
 	for (int i = 0; i < m->size / m->desc_size; i++) {
-		EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)(m->ptr + i * m->desc_size);
+		EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((char*)m->ptr + i * m->desc_size);
 		if (desc->type != EFI_CONVENTIONAL_MEMORY &&
 			desc->type != EFI_LOADER_CODE &&
 			desc->type != EFI_LOADER_DATA &&
@@ -99,7 +99,7 @@ void memory_setup(struct efi_memory_map* m) {
 		}
 	}
 
-	uint32_t kernel_pages = ((uint64_t)&_kernel_start - (uint64_t)&_kernel_start) / PAGE_SIZE + 1;
+	uint32_t kernel_pages = ((uint64_t)&_kernel_end - (uint64_t)&_kernel_start) / PAGE_SIZE + 1;
 	pagemap_lock_n(&_kernel_start, kernel_pages);
 }
 

@@ -11,7 +11,7 @@ ROOT_DIR ?= $(dir $(firstword $(MAKEFILE_LIST)))
 BUILD_DIR ?= $(ROOT_DIR)build/
 TARGET_DIR ?= $(ROOT_DIR)target/
 
-CFLAGS := -MMD -MP -Wall -Werror -mno-red-zone # -pedantic
+CFLAGS := -MMD -MP -Wall -Werror -mno-red-zone -pedantic
 LDFLAGS := -flavor ld
 ifneq ($(DEBUG), 1)
 CFLAGS += -O3 -flto=thin

@@ -30,12 +30,10 @@ Processes and drivers are [WASM](https://webassembly.org/) binary converted to s
 
 ### Prerequisites
 
-OS | Needed | Optional | Export
+OS | Needed | Optional
 -- | -- | -- | --
 Debian / Ubuntu | `make clang lld` | `qemu-system ovmf mtools xorriso`
-Arch / Manjaro | `make clang lld` | `qemu edk2-ovmf mtools libisoburn` | `OVMF=/usr/share/ovmf/x64/OVMF.fd`
-
-`Executable "wasm-ld" doesn't exist!`: Try `export PATH=$PATH:/usr/lib/llvm-10/bin`
+Arch / Manjaro | `make clang lld` | `qemu edk2-ovmf mtools libisoburn`
 
 ### Setup
 
@@ -50,23 +48,38 @@ make all
 ```
 3. Start `ENTRY` as **ELF binary**
 ```sh
-make run ENTRY=build/sample/hello.wasm LOADER=elf
+make run ENTRY=build/sample/hello LOADER=elf
 ```
 * Start `ENTRY` with **QEMU and OVMF**
 ```sh
-make run ENTRY=build/sample/hello.wasm
+make run ENTRY=build/sample/hello
 ```
 * Create a **bootable ISO** using optional prerequisites
 ```sh
-make package ENTRY=sample/hello.wasm
+make package ENTRY=sample/hello
 ```
+
+### Known environment errors
+
+Message | Possible solution
+--- | ---
+`recipe for target 'target/efi-app/srv/entry.wasm' failed` | `ENTRY` argument missing
+`llvm-ar: Command not found` | `export PATH=$PATH:/usr/lib/llvm-10/bin`
+`Executable "wasm-ld" doesn't exist!` | 🔼 🔼
+`lld: error: unable to find library -lc` | `export LDPATH=/usr/lib64`
+`/bin/sh: 1: ./run: not found` | `export DLINK=/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2`
+`qemu: could not load PC BIOS` | `export OVMF=/usr/share/ovmf/x64/OVMF.fd`
 
 ## Project structure
 
 * include/ - Shared structures declarations
+  * efi/ - EFI loader tools
   * kernel/ - OS core library declarations
   * mod/ - Modules declarations
+  * utils/ - Header only utilities
+  * *.h - Freestanding libc declarations
 * kernel/ - OS core library
+  * libc/ - libC implementation
 * loader/ - Boot loaders implementations
   * efi-app/ - In UEFI application
   * efi-os/ - UEFI exit loader

@@ -8,14 +8,14 @@
 
 static const char *const LVL_S[] = {
 #if ANSI_COLOR
-	"\e[1;41mEMERG ",
-	"\e[1;31mALERT ",
-	"\e[0;91mCRIT  ",
-	"\e[0;31mERR   ",
-	"\e[0;33mWARN  ",
-	"\e[0;01mNOTICE",
-	"\e[0;97mINFO  ",
-	"\e[0;90mDEBUG "
+	"\x1B[1;41mEMERG ",
+	"\x1B[1;31mALERT ",
+	"\x1B[0;91mCRIT  ",
+	"\x1B[0;31mERR   ",
+	"\x1B[0;33mWARN  ",
+	"\x1B[0;01mNOTICE",
+	"\x1B[0;97mINFO  ",
+	"\x1B[0;90mDEBUG "
 #else
 	"EMERG ",
 	"ALERT ",
@@ -45,7 +45,7 @@ static inline void prefix(enum klog_level lvl, cstr ctx) {
 }
 static inline void suffix(bool ln) {
 #if ANSI_COLOR
-	log("\e[0m\n", 4 + ln);
+	log("\x1B[0m\n", 4 + ln);
 #else
 	if (ln) log("\n", 1);
 #endif

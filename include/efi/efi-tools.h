@@ -187,14 +187,15 @@ static inline void printx(uint64_t hex, uint8_t width) {
 static inline void putsn(const char* str, size_t len) {
 	size_t done = 0;
 	char16_t buf[32];
+	const size_t buf_len = sizeof(buf)/sizeof(buf[0]);
 	while (len > done) {
 		/* memset */
-		for (size_t i = 0; i < sizeof(buf)/sizeof(buf[0]); i++)
+		for (size_t i = 0; i < buf_len; i++)
 			buf[i] = 0;
 
-		for (size_t i = 0; len > done && i < sizeof(buf)/sizeof(buf[0])-1; i++) {
+		for (size_t i = 0; len > done && i < buf_len-1; i++) {
 			if (*(str + done) == '\n') {
-				if (i < sizeof(buf)/sizeof(buf[0])-2) {
+				if (i < buf_len-2) {
 					buf[i++] = '\r';
 				} else break;
 			}

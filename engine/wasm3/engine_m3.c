@@ -24,12 +24,16 @@ static size_t engine_m3_list_imports(engine_module *mod, struct k_fn_decl *decls
 		if (m3_FindImportFunction((IM3Module)mod, offset + i, &ifn))
 			return i;
 
-		m3_GetFunctionImportName(ifn, &decls[i].mod, &decls[i].name);
-		decls[i].retc = m3_GetRetCount(ifn);
-		decls[i].argc = m3_GetArgCount(ifn);
-		//FIXME: only for stdout:write
-		static const enum w_fn_sign_type sign[] = {ST_CIO, ST_CLEN};
-		decls[i].argv = sign;
+		struct k_fn_decl* d = decls + i;
+		m3_GetFunctionImportName(ifn, &d->mod, &d->name);
+		d->retc = m3_GetRetCount(ifn);
+		d->argc = m3_GetArgCount(ifn);
+		d->argv = NULL;
+
+		//TODO: read data section ?
+		if (!decls[i].argv)
+			logf(KL_INFO, "No signature for %s->%s:%s %s\n",
+				 m3_GetModuleName((IM3Module)mod), d->mod, d->name, w_fn_sign2str(decls[i]));
 	}
 	return declcnt;
 }
@@ -46,7 +50,7 @@ static void engine_m3_free_module(engine_module *mod) {
  *  Convert map offset to pointer.
  *  Convert w_iovec to k_iovec.
  *  Play a lot with stack */
-static m3ApiRawFunction(engine_m3_generic_link) {
+static m3ApiRawFunction(engine_m3_link_signed) {
 	const uint32_t ret_cnt = m3_GetRetCount(_ctx->function);
 	const uint32_t arg_cnt = m3_GetArgCount(_ctx->function);
 	uint64_t *const ret_p = _sp;
@@ -54,7 +58,7 @@ static m3ApiRawFunction(engine_m3_generic_link) {
 	uint64_t *const arg_p = _sp;
 	_sp += arg_cnt;
 
-	const void *retv[ret_cnt];
+	void *retv[ret_cnt];
 	for (uint32_t i = 0; i < ret_cnt; i++) {
 		retv[i] = ret_p + i;
 	}
@@ -63,7 +67,7 @@ static m3ApiRawFunction(engine_m3_generic_link) {
 		struct engine_signed_call *s_call = _ctx->userdata;
 		assert(s_call->decl.retc == ret_cnt && s_call->decl.argc == arg_cnt);
 	*/
-	const enum w_fn_sign_type *const sign = ((struct engine_signed_call *)_ctx->userdata)->decl.argv;
+	const enum w_fn_sign_type *const sign = ((engine_signed_call*)_ctx->userdata)->decl.argv;
 
 	size_t ind_cnt = 0; /* Indirection buffer size */
 	const void *argv[arg_cnt];
@@ -132,13 +136,64 @@ static m3ApiRawFunction(engine_m3_generic_link) {
 	}
 	// assert(ind_cnt == sizeof(indv))
 
-	((struct engine_signed_call *)_ctx->userdata)->fn(
-		(k_refvec){argv, arg_cnt}, (k_refvec){retv, ret_cnt});
-
+	return ((engine_signed_call*)_ctx->userdata)->fn(
+			argv, retv, m3_GetUserData(runtime));
 	// big stack free...
-
-	return m3Err_none;
 }
+/** Striped engine_m3_link_signed only for ST_VAL */
+static m3ApiRawFunction(engine_m3_link_flat) {
+	const uint32_t ret_cnt = m3_GetRetCount(_ctx->function);
+	const uint32_t arg_cnt = m3_GetArgCount(_ctx->function);
+	uint64_t *const ret_p = _sp;
+	_sp += ret_cnt;
+	uint64_t *const arg_p = _sp;
+	_sp += arg_cnt;
+
+	void *retv[ret_cnt];
+	for (uint32_t i = 0; i < ret_cnt; i++) {
+		retv[i] = ret_p + i;
+	}
+	const void *argv[arg_cnt];
+	for (uint32_t i = 0; i < arg_cnt; i++) {
+		argv[i] = arg_p + i;
+	}
+
+	return ((engine_signed_call*)_ctx->userdata)->fn(
+			argv, retv, m3_GetUserData(runtime));
+	// big stack free...
+}
+/** Striped engine_m3_link_flat return one ST_VAL */
+static m3ApiRawFunction(engine_m3_link_flat_i) {
+	const uint32_t arg_cnt = m3_GetArgCount(_ctx->function);
+	uint64_t* ret_p = _sp++;
+	uint64_t *const arg_p = _sp;
+	_sp += arg_cnt;
+
+	const void *argv[arg_cnt];
+	for (uint32_t i = 0; i < arg_cnt; i++) {
+		argv[i] = arg_p + i;
+	}
+
+	return ((engine_signed_call*)_ctx->userdata)->fn(
+			argv, (void**)&ret_p, m3_GetUserData(runtime));
+	// big stack free...
+}
+/** Striped engine_m3_link_flat return void */
+static m3ApiRawFunction(engine_m3_link_flat_v) {
+	const uint32_t arg_cnt = m3_GetArgCount(_ctx->function);
+	uint64_t *const arg_p = _sp;
+	_sp += arg_cnt;
+
+	const void *argv[arg_cnt];
+	for (uint32_t i = 0; i < arg_cnt; i++) {
+		argv[i] = arg_p + i;
+	}
+
+	return ((engine_signed_call*)_ctx->userdata)->fn(
+			argv, NULL, m3_GetUserData(runtime));
+	// big stack free...
+}
+
 static engine_runtime *engine_m3_boot(engine_module *em, uint64_t stack_size, enum engine_boot_flags flags, struct engine_runtime_ctx* ctx) {
 
 	IM3Module mod = (IM3Module)em;
@@ -164,30 +219,31 @@ static engine_runtime *engine_m3_boot(engine_module *em, uint64_t stack_size, en
 			if (!engine_m3_list_imports(em, &decl, 1, i))
 				break;
 
-			engine_generic_call call;
-			if (UNLIKELY(!ctx) || !(call = ctx->linker(ctx->linker_arg, decl))) {
+			engine_signed_call* call;
+			if (LIKELY(ctx) && (call = ctx->linker(ctx, decl))) {
+				M3RawCall link = engine_m3_link_signed;
+				if (k_fn_decl_flat(call->decl)) {
+					switch (call->decl.argc)
+					{
+					case 0:
+						link = engine_m3_link_flat_v;
+						break;
+					case 1:
+						link = engine_m3_link_flat_i;
+						break;
+
+					default:
+						link = engine_m3_link_flat;
+						break;
+					}
+				}
+				res = m3_LinkRawFunctionEx(mod, decl.mod, decl.name, NULL, link, call);
+				if (LIKELY(!res)) continue;
+			} else
 				res = "no handler";
-				goto link_warn;
-			}
 
-			struct engine_signed_call *s_call = malloc(sizeof(*s_call));
-			if (UNLIKELY(!s_call)) {
-				res = m3Err_mallocFailed;
-				goto link_warn;
-			}
-
-			s_call->decl = decl;
-			s_call->fn = call;
-			res = m3_LinkRawFunctionEx(mod, decl.mod, decl.name, NULL, engine_m3_generic_link, s_call);
-			if (UNLIKELY(res)) {
-				free(s_call);
-				goto link_warn;
-			}
-
-			continue;
-			link_warn:
-				logf(KL_WARN, "While linking %s->%s:%s %s: %s\n", m3_GetModuleName(mod),
-					 decl.mod, decl.name, w_fn_sign2str(decl), res);
+			logf(KL_WARN, "While linking %s->%s:%s %s: %s\n", m3_GetModuleName(mod),
+					decl.mod, decl.name, w_fn_sign2str(decl), res);
 		}
 	}
 	if ((flags & PG_COMPILE_FLAG) && (res = m3_CompileModule(mod))) {

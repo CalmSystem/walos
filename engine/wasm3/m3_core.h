@@ -72,6 +72,7 @@ typedef m3slot_t *              m3stack_t;
 typedef
 const void * const  cvptr_t;
 
+#pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 # if defined (M3_DEBUG)
 
 #   define d_m3Log(CATEGORY, FMT, ...)                  printf (" %8s  |  " FMT, #CATEGORY, ##__VA_ARGS__);

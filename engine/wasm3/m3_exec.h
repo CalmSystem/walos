@@ -30,6 +30,8 @@
 #include "m3_exec_defs.h"
 
 #include <limits.h>
+#pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#pragma GCC diagnostic ignored "-Wextra-semi"
 
 d_m3BeginExternC
 

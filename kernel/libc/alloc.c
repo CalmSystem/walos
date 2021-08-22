@@ -24,12 +24,12 @@ static inline unsigned long knuth_mmix_one_round(unsigned long in) {
 }
 static void* alloc_set(struct alloc_t a) {
 	unsigned long* begin = a.start;
-	unsigned long* end = a.start + a.size;
+	unsigned long* end = (unsigned long*)((char*)a.start + a.size);
 
 	*begin = a.size;
 	*(end - 1) = a.size;
 
-	unsigned long magic = knuth_mmix_one_round((unsigned long)a.start);
+	unsigned long magic = knuth_mmix_one_round((uintptr_t)a.start);
 	*(begin + 1) = magic;
 	*(end - 2) = magic;
 
@@ -40,14 +40,14 @@ static struct alloc_t alloc_get(void *ptr) {
 	unsigned long* begin = data - 2;
 	unsigned long magic = *(begin + 1);
 
-	struct alloc_t a = {};
+	struct alloc_t a;
 	a.start = begin;
 	a.size = *begin;
 
-	unsigned long *end = (unsigned long*)(ptr + a.size) - 2;
+	unsigned long *end = (unsigned long*)((char*)ptr + a.size) - 2;
 	assert(*(end - 1) == a.size);
 	assert(*(end - 2) == magic);
-	assert(magic == knuth_mmix_one_round((unsigned long)a.start));
+	assert(magic == knuth_mmix_one_round((uintptr_t)a.start));
 
 	return a;
 }
@@ -91,11 +91,12 @@ static inline void* alloc(size_t size, bool zero) {
 			if (slab_head == NULL) return NULL;
 
 			uint64_t offset = 0;
+			char* slab_head_p = slab_head;
 			while (offset < slab_size) {
-				*(void**)(slab_head + offset) = slab_head + offset + SLAB_SIZE;
+				*(void**)(slab_head_p + offset) = slab_head_p + offset + SLAB_SIZE;
 				offset += SLAB_SIZE;
 			}
-			*(void**)(slab_head + offset - SLAB_SIZE) = NULL;
+			*(void**)(slab_head_p + offset - SLAB_SIZE) = NULL;
 		}
 		a.start = slab_head;
 		slab_head = *(void**)a.start;
@@ -115,7 +116,7 @@ static inline void* alloc(size_t size, bool zero) {
 
 		parent2--; // Store compagnons
 		for (;parent2 >= pow2; parent2--) {
-			void* half = a.start + (1UL<<parent2);
+			void* half = (char*)a.start + (1UL<<parent2);
 			*(void**)half = NULL;
 			buddy_tab[parent2-BUDDY_MIN_EXP] = half;
 		}
