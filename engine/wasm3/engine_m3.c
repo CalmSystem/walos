@@ -1,6 +1,7 @@
 #include <kernel/engine.h>
 #define K_CTX "engine"
 #include <kernel/log.h>
+#include <kernel/sign_tools.h>
 #include "wasm3.h"
 
 typedef struct engine_m3 {
@@ -64,10 +65,10 @@ static m3ApiRawFunction(engine_m3_link_signed) {
 	}
 
 	/*
-		struct engine_signed_call *s_call = _ctx->userdata;
+		struct k_signed_call *s_call = _ctx->userdata;
 		assert(s_call->decl.retc == ret_cnt && s_call->decl.argc == arg_cnt);
 	*/
-	const enum w_fn_sign_type *const sign = ((engine_signed_call*)_ctx->userdata)->decl.argv;
+	const enum w_fn_sign_type *const sign = ((k_signed_call*)_ctx->userdata)->decl.argv;
 
 	size_t ind_cnt = 0; /* Indirection buffer size */
 	const void *argv[arg_cnt];
@@ -136,7 +137,7 @@ static m3ApiRawFunction(engine_m3_link_signed) {
 	}
 	// assert(ind_cnt == sizeof(indv))
 
-	return ((engine_signed_call*)_ctx->userdata)->fn(
+	return ((k_signed_call*)_ctx->userdata)->fn(
 			argv, retv, m3_GetUserData(runtime));
 	// big stack free...
 }
@@ -158,7 +159,7 @@ static m3ApiRawFunction(engine_m3_link_flat) {
 		argv[i] = arg_p + i;
 	}
 
-	return ((engine_signed_call*)_ctx->userdata)->fn(
+	return ((k_signed_call*)_ctx->userdata)->fn(
 			argv, retv, m3_GetUserData(runtime));
 	// big stack free...
 }
@@ -174,7 +175,7 @@ static m3ApiRawFunction(engine_m3_link_flat_i) {
 		argv[i] = arg_p + i;
 	}
 
-	return ((engine_signed_call*)_ctx->userdata)->fn(
+	return ((k_signed_call*)_ctx->userdata)->fn(
 			argv, (void**)&ret_p, m3_GetUserData(runtime));
 	// big stack free...
 }
@@ -189,12 +190,12 @@ static m3ApiRawFunction(engine_m3_link_flat_v) {
 		argv[i] = arg_p + i;
 	}
 
-	return ((engine_signed_call*)_ctx->userdata)->fn(
+	return ((k_signed_call*)_ctx->userdata)->fn(
 			argv, NULL, m3_GetUserData(runtime));
 	// big stack free...
 }
 
-static engine_runtime *engine_m3_boot(engine_module *em, uint64_t stack_size, enum engine_boot_flags flags, struct engine_runtime_ctx* ctx) {
+static engine_runtime *engine_m3_boot(engine_module *em, uint64_t stack_size, enum engine_boot_flags flags, struct k_runtime_ctx* ctx) {
 
 	IM3Module mod = (IM3Module)em;
 	IM3Runtime runtime = m3_NewRuntime(m3_GetModuleEnvironment(mod), stack_size, ctx);
@@ -219,7 +220,7 @@ static engine_runtime *engine_m3_boot(engine_module *em, uint64_t stack_size, en
 			if (!engine_m3_list_imports(em, &decl, 1, i))
 				break;
 
-			engine_signed_call* call;
+			k_signed_call* call;
 			if (LIKELY(ctx) && (call = ctx->linker(ctx, decl))) {
 				M3RawCall link = engine_m3_link_signed;
 				if (k_fn_decl_flat(call->decl)) {

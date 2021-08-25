@@ -1,19 +1,7 @@
 #ifndef ENTRY_H
 #define ENTRY_H
 #include <kernel/os.h>
-#include <stdint.h>
-
-#define LFB_MAX_HEIGHT 0 // 1080
-#define LFB_RATIO_WIDTH(height) (height*16/9)
-#define GOP_PIXEL_FORMAT 1
-
-/** 32bit VGA like framebuffer */
-struct linear_frame_buffer {
-	void* base_addr;
-	uint32_t width;
-	uint32_t height;
-	uint32_t scan_line_size;
-};
+#include "../shared/lfb.h"
 
 #ifndef __EFI_H
 /** UEFI memory block descriptor */

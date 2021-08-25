@@ -4,7 +4,9 @@
 #include "efi.h"
 #include "protocol/efi-lip.h"
 #include "protocol/efi-sfsp.h"
+#include "protocol/efi-gop.h"
 #include <stddef.h>
+#include "../lfb.h"
 
 static EFI_SYSTEM_TABLE* system_table;
 static EFI_HANDLE image_handle;
@@ -297,6 +299,65 @@ static inline uint64_t get_file_size(EFI_FILE_PROTOCOL* file) {
 	file->GetPosition(file, &size);
 	file->SetPosition(file, start);
 	return size;
+}
+
+static EFI_STATUS load_gop(struct linear_frame_buffer* lfb) {
+	EFI_STATUS status;
+    EFI_GUID gopGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
+    EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
+
+    status = system_table->BootServices->LocateProtocol(&gopGuid, 0, (void**)&gop);
+    if(EFI_ERR & status) {
+        println(L"GOP: Not available");
+        return status;
+    }
+
+	EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *info;
+    uintn_t SizeOfInfo;
+
+    status = gop->QueryMode(gop, gop->Mode ? gop->Mode->Mode : 0, &SizeOfInfo, &info);
+    // this is needed to get the current video mode
+    if (status == EFI_NOT_STARTED)
+        status = gop->SetMode(gop, 0);
+    if(EFI_ERR & status) {
+        println(L"GOP: Can not query");
+        return status;
+    }
+
+	if (LFB_MAX_HEIGHT) {
+		uint32_t preferMode = gop->Mode->MaxMode+1, maxHeight = 0, maxBGR = 0;
+		float maxRatio = 0;
+        for (uint32_t i = 0; i < gop->Mode->MaxMode; i++) {
+            status = gop->QueryMode(gop, i, &SizeOfInfo, &info);
+			float ratio = (float)info->HorizontalResolution / info->VerticalResolution;
+            if (
+				(info->PixelFormat == PixelBlueGreenRedReserved8BitPerColor ||
+				 info->PixelFormat == PixelRedGreenBlueReserved8BitPerColor) &&
+                info->VerticalResolution <= LFB_MAX_HEIGHT &&
+				ratio >= LFB_MIN_RATIO && ratio <= LFB_MAX_RATIO &&
+                (info->VerticalResolution > maxHeight ||
+				 (info->VerticalResolution == maxHeight && ratio > maxRatio) ||
+				 (info->VerticalResolution == maxHeight && ratio == maxRatio && !maxBGR))
+			) {
+                preferMode = i;
+                maxHeight = info->VerticalResolution;
+				maxRatio = ratio;
+				maxBGR = info->PixelFormat == PixelBlueGreenRedReserved8BitPerColor;
+            }
+        }
+        status = gop->SetMode(gop, preferMode);
+        if(EFI_ERR & status) {
+            println(L"GOP: No compatible mode");
+            return status;
+        }
+	}
+
+	lfb->base_addr = (void*)gop->Mode->FrameBufferBase;
+	lfb->height = gop->Mode->Info->VerticalResolution;
+	lfb->width = gop->Mode->Info->HorizontalResolution;
+	lfb->scan_line_size = gop->Mode->Info->PixelsPerScanLine;
+	lfb->use_bgr = gop->Mode->Info->PixelFormat;
+	return EFI_SUCCESS;
 }
 
 /** Ignore stack checks (unsafe) */

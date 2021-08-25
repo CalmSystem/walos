@@ -73,7 +73,6 @@ Message | Possible solution
 ## Project structure
 
 * include/ - Shared structures declarations
-  * efi/ - EFI loader tools
   * kernel/ - OS core library declarations
   * mod/ - Modules declarations
   * utils/ - Header only utilities
@@ -89,7 +88,7 @@ Message | Possible solution
 * srv/ - Modules implementations aka services
 * sample/ - Sample entry points
   * hello/ - Print `Hello world`
-  * vga/ - Display `wasm.tga` on screen
+  * vga/ - Display `wasm.tga` on screen and wait
 
 ### Outputs
 

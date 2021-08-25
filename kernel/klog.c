@@ -1,10 +1,9 @@
-#include "../lib.h"
+#include "lib.h"
 #include <kernel/log.h>
-#include "stddef.h"
-#include "stdarg.h"
-#include "doprnt.h"
-#include "string.h"
-#include "../lib.h"
+#include <stddef.h>
+#include <stdarg.h>
+#include <string.h>
+#include "libc/doprnt.h"
 
 static const char *const LVL_S[] = {
 #if ANSI_COLOR
@@ -32,11 +31,6 @@ static inline void log(cstr str, unsigned len) {
 	loader_get_handle()->log(str, len);
 }
 
-/*static struct {
-	cstr ctx;
-	enum klog_level lvl;
-	uint32_t len;
-} s_ctx = {NULL, 0};*/
 static inline void prefix(enum klog_level lvl, cstr ctx) {
 	log(LVL_S[lvl], strlen(LVL_S[0]));
 	log(" [", 2);
@@ -57,11 +51,15 @@ void klogs(enum klog_level lvl, cstr ctx, cstr str) {
 	log(str, len);
 	suffix(str[len] != '\n');
 }
+
 static void savechar(char *arg, int c) {
-	// struct sprintf_state *state = (struct sprintf_state *)arg;
-	// TODO: buffer
-	char v = c;
-	log(&v, 1);
+	static char buf[32];
+	static size_t buf_size = 0;
+	if (buf_size && (!c || buf_size >= sizeof(buf))) {
+		log(buf, buf_size);
+		buf_size = 0;
+	}
+	if (c) buf[buf_size++] = c;
 }
 void klogf(enum klog_level lvl, cstr ctx, cstr fmt, ...) {
 	va_list args;
@@ -70,6 +68,7 @@ void klogf(enum klog_level lvl, cstr ctx, cstr fmt, ...) {
 	va_start(args, fmt);
 	_doprnt(fmt, args, 0, (void (*)())savechar, NULL);
 	va_end(args);
+	savechar(NULL, 0);
 	suffix(false);
 
 	return;

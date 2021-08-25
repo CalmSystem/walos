@@ -67,59 +67,6 @@ static inline Elf64_Addr load_kernel(char16_t* path) {
 	return header.e_entry;
 }
 
-static inline EFI_STATUS load_gop(struct linear_frame_buffer* out) {
-	EFI_STATUS status;
-	EFI_GUID gopGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
-	EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
-
-	status = system_table->BootServices->LocateProtocol(&gopGuid, 0, (void**)&gop);
-	if(EFI_ERR & status) {
-		println(L"GOP: Not available");
-		return status;
-	}
-
-	EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *info;
-	uintn_t i, SizeOfInfo, numModes, nativeMode;
-
-	status = gop->QueryMode(gop, gop->Mode ? gop->Mode->Mode : 0, &SizeOfInfo, &info);
-	// this is needed to get the current video mode
-	if (status == EFI_NOT_STARTED)
-		status = gop->SetMode(gop, 0);
-	if(EFI_ERR & status) {
-		println(L"GOP: Can not query");
-		return status;
-	}
-
-	nativeMode = gop->Mode->Mode;
-	numModes = gop->Mode->MaxMode;
-
-	if (LFB_MAX_HEIGHT) {
-		uint32_t preferMode = numModes+1, maxHeight = 0;
-		for (i = 0; LFB_MAX_HEIGHT && i < numModes; i++) {
-			status = gop->QueryMode(gop, i, &SizeOfInfo, &info);
-			if (info->PixelFormat == GOP_PIXEL_FORMAT &&
-				info->VerticalResolution <= LFB_MAX_HEIGHT &&
-				info->VerticalResolution > maxHeight &&
-				info->HorizontalResolution == LFB_RATIO_WIDTH(info->VerticalResolution))
-			{
-				preferMode = i;
-				maxHeight = info->VerticalResolution;
-			}
-		}
-		status = gop->SetMode(gop, preferMode);
-		if(EFI_ERR & status) {
-			println(L"GOP: No compatible mode");
-			return status;
-		}
-	}
-
-	out->base_addr = (void*)gop->Mode->FrameBufferBase;
-	out->width = gop->Mode->Info->HorizontalResolution;
-	out->height = gop->Mode->Info->VerticalResolution;
-	out->scan_line_size = gop->Mode->Info->PixelsPerScanLine;
-	return EFI_SUCCESS;
-}
-
 static inline void* load_acpi() {
 	EFI_GUID v2 = EFI_ACPI_20_TABLE_GUID;
 	for (uintn_t i = 0; i < system_table->NumberOfTableEntries; i++) {
@@ -215,8 +162,8 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	load_initrd(&info.initrd);
 	if (!info.initrd.count) return EFI_ERR;
 
-	struct linear_frame_buffer gop = {0};
-	if ((load_gop(&gop) & EFI_ERR) == 0) info.lfb = &gop;
+	struct linear_frame_buffer lfb = {0};
+	if (load_gop(&lfb) == EFI_SUCCESS) info.lfb = &lfb;
 
 	uintn_t map_key = 0;
 	{

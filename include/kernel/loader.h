@@ -32,18 +32,9 @@ struct loader_handle {
 	void (*srv_read)(cstr name, void *ptr, size_t len, size_t offset, void (*cb)(void* arg, size_t read), void* arg);
 };
 
-struct loader_feature {
-	struct k_fn_decl decl;
-	union {
-		int (*fn)(k_refvec args, k_refvec rets);
-		int (*cb)(k_refvec args, size_t retc, void (*cb)(void *arg, const void **retv), void *arg);
-	} impl;
-	//MAYBE: use uint8_t flags
-	bool is_cb;
-};
 /** Additional functions provided as module functions */
 struct loader_features {
-	struct loader_feature* ptr; /* Array of features */
+	struct k_signed_call* ptr; /* Array of features */
 	size_t len; /* Number of features */
 };
 

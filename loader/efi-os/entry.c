@@ -4,6 +4,7 @@
 #include "initrd.c.h"
 #include "acpi.c.h"
 #include "memory.h"
+#include "vga.c.h"
 
 void _start(struct loader_info *info) {
 	interrupt_disable();
@@ -12,6 +13,20 @@ void _start(struct loader_info *info) {
 
 	memory_setup(&info->mmap);
 	if (info->initrd.list) initrd = &info->initrd;
+
+	size_t featurecnt = 0;
+	if (info->lfb) {
+		vga_setup(info->lfb);
+		featurecnt += 2;
+	}
+
+	k_signed_call features[featurecnt];
+	size_t i_feature = 0;
+	if (info->lfb) {
+		// MAYBE: log to screen
+		features[i_feature++] = vga_info_call;
+		features[i_feature++] = vga_put_call;
+	}
 
 	struct os_ctx_t os_ctx = {
 		{
@@ -22,7 +37,7 @@ void _start(struct loader_info *info) {
 			.srv_list=loader_srv_list,
 			.srv_read=loader_srv_read
 		}, {
-			NULL, 0
+			features, featurecnt
 		}
 	};
 	os_entry(&os_ctx);

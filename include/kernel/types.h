@@ -25,5 +25,13 @@ struct k_fn_decl {
 	uint32_t argc; /* Number of parameters */
 	const enum w_fn_sign_type* argv; /* Array of argc parameters */
 };
+/** Opaque program context */
+struct k_runtime_ctx;
+typedef cstr (*k_signed_call_fn)(const void **args, void **rets, struct k_runtime_ctx* ctx);
+/** Well known function */
+typedef struct k_signed_call {
+	k_signed_call_fn fn;
+	struct k_fn_decl decl;
+} k_signed_call;
 
 #endif

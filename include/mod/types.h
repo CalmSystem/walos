@@ -2,7 +2,7 @@
 #define __MOD_COMMON_H
 
 #include <stdint.h>
-#include "./sign.h"
+#include "sign.h"
 #if WASM_64
 typedef int64_t intw_t;
 typedef uint64_t uintw_t;

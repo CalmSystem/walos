@@ -1,6 +1,7 @@
-#include "./lib.h"
+#include "lib.h"
 #include <kernel/engine.h>
 #include <kernel/log.h>
+#include <kernel/sign_tools.h>
 #include <utils/xxd.h>
 
 #define ENTRY_NAME "entry.wasm"
@@ -10,6 +11,7 @@ static void entry_run();
 
 static const struct os_ctx_t* s_ctx;
 const struct loader_handle *loader_get_handle() { return &s_ctx->handle; }
+const struct loader_features *loader_get_feats() { return &s_ctx->feats; }
 
 static bool s_running = true;
 static inline void shutdown() { s_running = false; }
@@ -62,7 +64,7 @@ static void srv_list_cb(void* offset, const struct loader_srv_file_t* files, siz
 }
 
 static enum w_fn_sign_type __stdout_write_sign[] = {ST_CIO, ST_CLEN};
-static cstr stdlib_stdout_write(const void **args, void **rets, struct engine_runtime_ctx* ctx) {
+static cstr stdlib_stdout_write(const void **args, void **rets, struct k_runtime_ctx* ctx) {
 	const k_iovec* iovs = args[0];
 	w_size icnt = *(const w_size*)args[1];
 	for (w_size i = 0; i < icnt; i++) {
@@ -71,26 +73,33 @@ static cstr stdlib_stdout_write(const void **args, void **rets, struct engine_ru
 	*(w_res*)rets[0] = W_SUCCESS;
 	return NULL;
 }
-static cstr stdlib_stdout_putc(const void **args, void **rets, struct engine_runtime_ctx* ctx) {
+static cstr stdlib_stdout_putc(const void **args, void **rets, struct k_runtime_ctx* ctx) {
 	loader_get_handle()->log((const char*)args[0], 1);
 	*(w_res*)rets[0] = W_SUCCESS;
 	return NULL;
 }
 
-static struct engine_signed_call stdlib_signed[] = {
+static struct k_signed_call stdlib[] = {
 	{stdlib_stdout_write, {"stdout", "write", 1, 2, __stdout_write_sign}},
 	{stdlib_stdout_putc,  {"stdout", "putc", 1, 1, NULL}}
 };
 
-static engine_signed_call* entry_linker(struct engine_runtime_ctx* self, struct k_fn_decl decl) {
-	for (size_t i = 0; i < lengthof(stdlib_signed); i++) {
-		int res;
-		if ((res = k_fn_decl_match(decl, stdlib_signed[i].decl)) < 0)
-			continue;
-		if (res == 0)
-			logf(KL_NOTICE, "Suppose signature for %s:%s %s\n",
-				  decl.mod, decl.name, w_fn_sign2str(stdlib_signed[i].decl));
-		return &stdlib_signed[i];
+static k_signed_call* entry_linker(struct k_runtime_ctx* self, struct k_fn_decl decl) {
+	struct loader_features libs[] = { //TODO: by process ctx
+		{stdlib, lengthof(stdlib)},
+		*loader_get_feats()
+	};
+
+	for (size_t j = 0; j < lengthof(libs); j++) {
+		for (size_t i = 0; i < libs[j].len; i++) {
+			int res;
+			if ((res = k_fn_decl_match(decl, libs[j].ptr[i].decl)) < 0)
+				continue;
+			if (res == 0)
+				logf(KL_NOTICE, "Suppose signature for %s:%s %s\n",
+					decl.mod, decl.name, w_fn_sign2str(libs[j].ptr[i].decl));
+			return &libs[j].ptr[i];
+		}
 	}
 	logf(KL_CRIT, "Cannot link %s:%s %s\n", decl.mod, decl.name, w_fn_sign2str(decl));
 	return NULL;
@@ -98,8 +107,6 @@ static engine_signed_call* entry_linker(struct engine_runtime_ctx* self, struct 
 static void entry_read_cb(void *offset, size_t part_size) {
 	size_t read = (size_t)offset + part_size;
 	if (read >= entry_file.size) {
-		logs(KL_NOTICE, "Running " ENTRY_NAME);
-
 		engine_module* entry_mod = s_engine->parse(s_engine, (struct engine_code_ref){
 			ENTRY_NAME, entry_file.data, entry_file.size });
 		if (!entry_mod) {
@@ -108,7 +115,8 @@ static void entry_read_cb(void *offset, size_t part_size) {
 			return;
 		}
 
-		struct engine_runtime_ctx ctx = { entry_linker };
+		logs(KL_NOTICE, "Running " ENTRY_NAME);
+		struct k_runtime_ctx ctx = { entry_linker };
 		if (!s_engine->boot(entry_mod, 2048, PG_LINK_FLAG | PG_START_FLAG, &ctx)) {
 			logs(KL_CRIT, "Failed to run entry");
 		}

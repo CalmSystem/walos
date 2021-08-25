@@ -1,6 +1,6 @@
 #ifndef __MOD_LINK_H
 #define __MOD_LINK_H
-#include "./types.h"
+#include "types.h"
 
 /** Reference to an external w_iovec group. Like file descriptor */
 typedef intw_t w_io_ref;

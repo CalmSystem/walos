@@ -6,7 +6,7 @@ LOADER_DEPS := $(LOADER_BUILD_DIR)efi.d
 
 $(LOADER_BOOT): $(LOADER_EFI) $(LOADER_EFI_LINKED)
 	$(MKDIR_P) $(LOADER_BUILD_DIR)
-	$(CC) $(CFLAGS) -fno-lto -ffreestanding -fshort-wchar -target $(ARCH)-unknown-windows -I$(ROOT_DIR)include -c $< -o $(LOADER_BUILD_DIR)efi.o
+	$(CC) $(CFLAGS) -fno-lto -ffreestanding -fshort-wchar -target $(ARCH)-unknown-windows -I$(ROOT_DIR)include -I$(ROOT_DIR)loader/shared -c $< -o $(LOADER_BUILD_DIR)efi.o
 	$(MKDIR_P) $(dir $@)
 	$(LD) -flavor link -subsystem:efi_application -entry:efi_main $(LOADER_BUILD_DIR)efi.o $(LOADER_EFI_LINKED) -out:$@
 

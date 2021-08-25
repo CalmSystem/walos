@@ -1,5 +1,6 @@
 #include <efi/efi-tools.h>
 #include <kernel/os.h>
+#include "../shared/vga.c.h"
 
 #define SRV_PATH "srv"
 
@@ -112,6 +113,20 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	println(WSTR("EFI APP Loader"));
 	push_watchdog_timer();
 
+	size_t featurecnt = 0;
+	struct linear_frame_buffer lfb = {0};
+	if (load_gop(&lfb) == EFI_SUCCESS) {
+		vga_setup(&lfb);
+		featurecnt += 2;
+	}
+
+	k_signed_call features[featurecnt];
+	size_t i_feature = 0;
+	if (lfb.base_addr) {
+		features[i_feature++] = vga_info_call;
+		features[i_feature++] = vga_put_call;
+	}
+
 	struct os_ctx_t os_ctx = {
 		{
 			.log=putsn,
@@ -121,7 +136,7 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 			.srv_list=loader_srv_list,
 			.srv_read=loader_srv_read
 		}, {
-			NULL, 0
+			features, featurecnt
 		}
 	};
 	os_entry(&os_ctx);
