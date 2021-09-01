@@ -21,9 +21,9 @@ Processes and drivers are [WASM](https://webassembly.org/) binary converted to s
 
 ### Planned
 
-* Logger
 * Multitasking
 * Dependency tree
+* WASM custom section
 * Optional service streaming
 
 ## Getting started
@@ -48,15 +48,15 @@ make all
 ```
 3. Start `ENTRY` as **ELF binary**
 ```sh
-make run ENTRY=build/sample/hello LOADER=elf
+make run ENTRY=sample/shell LOADER=elf
 ```
 * Start `ENTRY` with **QEMU and OVMF**
 ```sh
-make run ENTRY=build/sample/hello
+make run ENTRY=sample/shell
 ```
 * Create a **bootable ISO** using optional prerequisites
 ```sh
-make package ENTRY=sample/hello
+make package ENTRY=sample/hello.c
 ```
 
 ### Known environment errors
@@ -74,21 +74,21 @@ Message | Possible solution
 
 * include/ - Shared structures declarations
   * kernel/ - OS core library declarations
-  * mod/ - Modules declarations
   * utils/ - Header only utilities
-  * *.h - Freestanding libc declarations
+  * w/ - Common services declarations
 * kernel/ - OS core library
-  * libc/ - libC implementation
+  * libc/ - Freestanding libC
 * loader/ - Boot loaders implementations
   * efi-app/ - In UEFI application
   * efi-os/ - UEFI exit loader
   * elf/ - Linux binary loader
 * engine/ - WASM engine implementations
   * wasm3/ - [WASM3](https://github.com/wasm3/wasm3) interpreter
-* srv/ - Modules implementations aka services
+* srv/ - Services implementations
 * sample/ - Sample entry points
   * hello/ - Print `Hello world`
   * vga/ - Display `wasm.tga` on screen and wait
+  * shell/ - Interactive shell using [WAPM](https://wapm.io/)
 
 ### Outputs
 

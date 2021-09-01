@@ -8,7 +8,7 @@ typedef intw_t w_io_ref;
 typedef intw_t w_cio_ref;
 
 /** Get number of elements in w_cio_ref or w_io_ref */
-W_FN(link, io_cnt, "e(i*)", w_res, (w_cio_ref ref w_size* cnt))
+W_FN(link, io_cnt, "e(i*)", w_res, (w_cio_ref ref, w_size* cnt))
 /** Get len of a w_cio_ref or w_io_ref element */
 W_FN(link, io_len, "e(ii*)", w_res, (w_cio_ref ref, w_size idx, w_size* len))
 /** Get lens of lencnt first w_cio_ref or w_io_ref elements */

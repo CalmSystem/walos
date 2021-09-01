@@ -5,6 +5,12 @@
 #include "/usr/include/dirent.h"
 #include <sys/stat.h>
 #include "/usr/include/string.h"
+#include "/usr/include/termios.h"
+
+static inline void llog_out(cstr str, unsigned len) {
+	fwrite(str, len, 1, stdout);
+}
+#include <llog.h>
 
 static void loader_log(cstr str, size_t len) {
 	fwrite(str, len, 1, stdout);
@@ -92,9 +98,29 @@ static void loader_free(page_t* first, size_t n_pages) {
 	free(first);
 }
 
-int main(int argc, char const *argv[]) {
-	puts("ELF loader");
+static struct termios s_old_tio = {0};
+static inline void hw_key_restore() {
+	if (s_old_tio.c_lflag) {
+		tcsetattr(STDIN_FILENO, TCSANOW, &s_old_tio);
+	}
+}
+static cstr hw_key_read(const void** argv, void** retv, struct k_runtime_ctx* ctx) {
+	if (!s_old_tio.c_lflag) {
+		tcgetattr(STDIN_FILENO, &s_old_tio);
+		struct termios new_tio = s_old_tio;
+		new_tio.c_lflag &= (~ICANON & ~ECHO);
+		tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
+	}
+	*(char*)retv[0] = getchar();
+	return NULL;
+}
 
+int main(int argc, char const *argv[]) {
+	llogs(WL_NOTICE, "ELF loader");
+
+	struct k_signed_call features[] = {
+		{hw_key_read, {"hw", "key_read", 1, 0, NULL}}
+	};
 	struct os_ctx_t os_ctx = {
 		{
 			.log=loader_log,
@@ -104,10 +130,12 @@ int main(int argc, char const *argv[]) {
 			.srv_list=loader_srv_list,
 			.srv_read=loader_srv_read
 		}, {
-			NULL, 0
+			features, lengthof(features)
 		}
 	};
 	os_entry(&os_ctx);
-	puts("OS Stopped");
+	llogs(WL_INFO, "OS Stopped");
+
+	hw_key_restore();
 	return 0;
 }

@@ -7,17 +7,41 @@
 static inline char w_fn_sign2char(enum w_fn_sign_type s) {
 	switch (s)
 	{
-	case ST_BLEN: return 'b';
-	case ST_CLEN: return 'c';
+	case ST_LEN: return 'z';
 	case ST_F64: return 'F';
 	case ST_F32: return 'f';
 	case ST_I64: return 'I';
 	case ST_I32: return 'i';
-	case ST_OVAL: return '*';
-	case ST_VEC: return 'V';
+	case ST_VAL: return '.';
+	case ST_PTR: return '*';
+	case ST_ARR: return 'A';
 	case ST_REFV: return 'R';
 	case ST_CIO: return 'C';
 	case ST_BIO: return 'B';
+	}
+}
+static inline enum w_fn_sign_type w_fn_char2sign(char c) {
+	switch (c)
+	{
+	case 'z':
+	case 'b':
+	case 'c':
+	case 'r':
+	case 'a':
+		return ST_LEN;
+	case 'F': return ST_F64;
+	case 'f': return ST_F32;
+	case 'I': return ST_I64;
+	case 'i':
+	case 'e':
+		return ST_I32;
+	case '.': return ST_VAL;
+	case '*': return ST_PTR;
+	case 'A': return ST_ARR;
+	case 'R': return ST_REFV;
+	case 'C': return ST_CIO;
+	case 'B': return ST_BIO;
+	default: return ST_VAL;
 	}
 }
 static inline cstr w_fn_sign2str_r(struct k_fn_decl d, char* in) {
@@ -26,7 +50,7 @@ static inline cstr w_fn_sign2str_r(struct k_fn_decl d, char* in) {
 		*(s++) = 'v';
 	else {
 		for (uint32_t i = 0; i < d.retc; i++)
-			*(s++) = 'i';
+			*(s++) = w_fn_sign2char(ST_VAL);
 	}
 	*(s++) = '(';
 	for (uint32_t i = 0; i < d.argc; i++) {

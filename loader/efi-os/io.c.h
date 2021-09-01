@@ -6,12 +6,11 @@ static inline void serial_putc(char c) {
 	while ((io_read8(COM1 + 5) & 0x20) == 0);
 	io_write8(COM1, c);
 }
-static void serial_puts(cstr s) {
-	while (*s)
-		serial_putc(*(s++));
-}
 
 static void loader_log(cstr str, size_t len) {
 	for (size_t i = 0; i < len; i++)
 		serial_putc(*(str++));
 }
+
+static inline void llog_out(cstr str, unsigned len) { loader_log(str, len); }
+#include <llog.h>

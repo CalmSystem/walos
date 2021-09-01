@@ -31,9 +31,7 @@ static void loader_srv_list(size_t to_skip, void (*cb)(void *arg, const struct l
 			break;
 		}
 		if (size > sizeof(buf)) {
-			print(WSTR("Service name too long: "));
-			printd(size);
-			print(WSTR(""));
+			llogs(WL_CRIT, "Service name too long");
 			cb(arg, NULL, 0);
 			break;
 		}
@@ -106,25 +104,36 @@ static void loader_free(page_t* first, size_t n_pages) {
 	system_table->BootServices->FreePages((uintn_t)first, n_pages);
 }
 
+static cstr hw_key_read(const void** argv, void** retv, struct k_runtime_ctx* ctx) {
+	EFI_INPUT_KEY key;
+	while (system_table->ConIn->ReadKeyStroke(system_table->ConIn, &key) != EFI_SUCCESS)
+		system_table->BootServices->WaitForEvent(1, system_table->ConIn->WaitForKey, 0);
+
+	*(char*)retv[0] = key.ScanCode == '\b' ? 127 : key.UnicodeChar;
+	return NULL;
+}
+
 EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	system_table = st;
 	image_handle = ih;
 
-	println(WSTR("EFI APP Loader"));
+	st->ConOut->ClearScreen(st->ConOut);
+	llogs(WL_NOTICE, "EFI APP Loader");
 	push_watchdog_timer();
 
-	size_t featurecnt = 0;
+	size_t i_feature = 1;
 	struct linear_frame_buffer lfb = {0};
 	if (load_gop(&lfb) == EFI_SUCCESS) {
 		vga_setup(&lfb);
-		featurecnt += 2;
+		i_feature += lengthof(vga_features);
 	}
 
+	const size_t featurecnt = i_feature;
 	k_signed_call features[featurecnt];
-	size_t i_feature = 0;
-	if (lfb.base_addr) {
-		features[i_feature++] = vga_info_call;
-		features[i_feature++] = vga_put_call;
+	i_feature = 0;
+	features[i_feature++] = (k_signed_call){hw_key_read, {"hw", "key_read", 1, 0, NULL}};
+	for (size_t i = 0; lfb.base_addr && i < lengthof(vga_features); i++) {
+		features[i_feature++] = vga_features[i];
 	}
 
 	struct os_ctx_t os_ctx = {
@@ -141,9 +150,9 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	};
 	os_entry(&os_ctx);
 
-	println(WSTR("OS Stopped"));
+	llogs(WL_INFO, "OS Stopped");
 #if LOADER_SLOW_STOP
-	println(WSTR("Waiting 10s..."));
+	llogs(WL_DEBUG, "Waiting 10s...");
 	system_table->BootServices->Stall(10000000);
 #endif
 	return system_table->RuntimeServices->ResetSystem(EfiResetShutdown, EFI_SUCCESS, 0, NULL);

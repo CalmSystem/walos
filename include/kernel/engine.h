@@ -3,8 +3,7 @@
 
 #include "types.h"
 #define WASM_ENGINE 1
-#define W_FN(mod, name, sign, ret, args) static cstr __ws_##mod##_##name = sign;
-#include <mod/types.h>
+#include <w/types.h>
 
 /** Parsed program */
 typedef struct engine_module engine_module;
@@ -21,7 +20,7 @@ struct engine_code_ref {
 };
 
 typedef cstr (*engine_generic_call)(struct k_refvec args, struct k_refvec rets);
-struct k_runtime_ctx {
+struct engine_runtime_ctx {
 	k_signed_call* (*linker)(struct k_runtime_ctx*, struct k_fn_decl);
 };
 enum engine_boot_flags {

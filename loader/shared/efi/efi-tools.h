@@ -213,6 +213,16 @@ static inline void putsn(const char* str, size_t len) {
 	}
 }
 
+#undef ANSI_COLOR
+static inline void llog_out(const char* str, unsigned len) { putsn(str, len); }
+static inline size_t strlen(const char *s) {
+	const char *ss = s;
+	while (*ss)
+		ss++;
+	return ss - s;
+}
+#include "../llog.h"
+
 static char16_t *_tab_str = L"    ";
 static char16_t *_header_str = L"physical address     virtual address      pages                type";
 static char16_t *_mem_attribute[] = {

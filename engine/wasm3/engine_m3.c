@@ -13,7 +13,7 @@ static engine_module *engine_m3_parse(struct engine *self, struct engine_code_re
 	IM3Module mod;
 	M3Result res = m3_ParseModule(((struct engine_m3*)self)->env, &mod, ref.code, ref.code_size);
 	if (res) {
-		logf(KL_ERR, "While parsing %s: %s\n", ref.name, res);
+		logf(WL_ERR, "While parsing %s: %s\n", ref.name, res);
 		return NULL;
 	}
 	m3_SetModuleName(mod, ref.name);
@@ -33,7 +33,7 @@ static size_t engine_m3_list_imports(engine_module *mod, struct k_fn_decl *decls
 
 		//TODO: read data section ?
 		if (!decls[i].argv)
-			logf(KL_INFO, "No signature for %s->%s:%s %s\n",
+			logf(WL_INFO, "No signature for %s->%s:%s %s\n",
 				 m3_GetModuleName((IM3Module)mod), d->mod, d->name, w_fn_sign2str(decls[i]));
 	}
 	return declcnt;
@@ -87,10 +87,10 @@ static m3ApiRawFunction(engine_m3_link_signed) {
 				ind_cnt += len * sizeof(void*);
 				len *= sizeof(w_ptr);
 				break;
-			case ST_VEC:
+			case ST_ARR:
 				len *= sizeof(uint8_t);
 				break;
-			case ST_OVAL:
+			case ST_PTR:
 				len = sizeof(uint64_t);
 				break;
 			default:
@@ -200,7 +200,7 @@ static engine_runtime *engine_m3_boot(engine_module *em, uint64_t stack_size, en
 	IM3Module mod = (IM3Module)em;
 	IM3Runtime runtime = m3_NewRuntime(m3_GetModuleEnvironment(mod), stack_size, ctx);
 	if (!runtime) {
-		logf(KL_CRIT, "Cannot allocate runtime with %zu stack\n", stack_size);
+		logf(WL_CRIT, "Cannot allocate runtime with %zu stack\n", stack_size);
 		return NULL;
 	}
 
@@ -210,7 +210,7 @@ static engine_runtime *engine_m3_boot(engine_module *em, uint64_t stack_size, en
 	if (res) {
 		m3_FreeModule(mod);
 		m3_FreeRuntime(runtime);
-		logf(KL_ERR, "While loading %s: %s\n", m3_GetModuleName(mod), res);
+		logf(WL_ERR, "While loading %s: %s\n", m3_GetModuleName(mod), res);
 		return NULL;
 	}
 
@@ -221,10 +221,10 @@ static engine_runtime *engine_m3_boot(engine_module *em, uint64_t stack_size, en
 				break;
 
 			k_signed_call* call;
-			if (LIKELY(ctx) && (call = ctx->linker(ctx, decl))) {
+			if (LIKELY(ctx) && (call = ((struct engine_runtime_ctx*)ctx)->linker(ctx, decl))) {
 				M3RawCall link = engine_m3_link_signed;
 				if (k_fn_decl_flat(call->decl)) {
-					switch (call->decl.argc)
+					switch (call->decl.retc)
 					{
 					case 0:
 						link = engine_m3_link_flat_v;
@@ -243,18 +243,18 @@ static engine_runtime *engine_m3_boot(engine_module *em, uint64_t stack_size, en
 			} else
 				res = "no handler";
 
-			logf(KL_WARN, "While linking %s->%s:%s %s: %s\n", m3_GetModuleName(mod),
+			logf(WL_WARN, "While linking %s->%s:%s %s: %s\n", m3_GetModuleName(mod),
 					decl.mod, decl.name, w_fn_sign2str(decl), res);
 		}
 	}
 	if ((flags & PG_COMPILE_FLAG) && (res = m3_CompileModule(mod))) {
 		m3_FreeRuntime(runtime);
-		logf(KL_WARN, "While compiling %s: %s\n", m3_GetModuleName(mod), res);
+		logf(WL_WARN, "While compiling %s: %s\n", m3_GetModuleName(mod), res);
 		return NULL;
 	}
 	if ((flags & PG_START_FLAG) && (res = m3_RunStart(mod))) {
 		m3_FreeRuntime(runtime);
-		logf(KL_WARN, "While starting %s: %s\n", m3_GetModuleName(mod), res);
+		logf(WL_WARN, "While starting %s: %s\n", m3_GetModuleName(mod), res);
 		return NULL;
 	}
 
@@ -277,7 +277,7 @@ static int engine_m3_call(engine_export_fn *f, struct k_refvec args, struct k_re
 	M3Result res;
 	res = m3_Call(fn, args.len, args.ptr);
 	if (res) {
-		logf(KL_WARN, "While calling %s->%s: %s\n", m3_GetModuleName(m3_GetFunctionModule(fn)),
+		logf(WL_WARN, "While calling %s->%s: %s\n", m3_GetModuleName(m3_GetFunctionModule(fn)),
 			m3_GetFunctionName(fn), res);
 		return -1;
 	}

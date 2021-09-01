@@ -30,7 +30,7 @@ static inline Elf64_Addr load_kernel(char16_t* path) {
 		header.e_machine != EM_X86_64 ||
 		header.e_version != EV_CURRENT
 	) {
-		println(L"Kernel: Bad format");
+		llogs(WL_CRIT, "Kernel: Bad format");
 		return 0;
 	}
 
@@ -78,7 +78,7 @@ static inline void* load_acpi() {
 		if (memcmp(&system_table->ConfigurationTable[i].VendorGuid, &v1, sizeof(v1)) == 0)
 			return system_table->ConfigurationTable[i].VendorTable;
 	}
-	println(WSTR("Failed to load ACPI"));
+	llogs(WL_CRIT, "Failed to load ACPI");
 	return NULL;
 }
 
@@ -102,9 +102,7 @@ static inline void load_initrd(struct fake_initrd* init) {
 		uintn_t size = sizeof(buf);
 		if (srv_dir->Read(srv_dir, &size, buf) & EFI_ERR || size == 0) break;
 		if (size > sizeof(buf)) {
-			print(WSTR("Service name too long: "));
-			printd(size);
-			print(WSTR(""));
+			llogs(WL_CRIT, "Service name too long");
 			init->count = 0;
 			return;
 		}
@@ -149,7 +147,8 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	system_table = st;
 	image_handle = ih;
 
-	println(WSTR("EFI OS Loader"));
+	st->ConOut->ClearScreen(st->ConOut);
+	llogs(WL_NOTICE, "EFI OS Loader");
 
 	Elf64_Addr kernel_entry = load_kernel(WSTR(K_PATH));
 	if (!kernel_entry) return EFI_ERR;
@@ -178,7 +177,7 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	}
 
 	__attribute__((sysv_abi)) void (*kernel_start)(struct loader_info*) = (__attribute__((sysv_abi)) void (*)(struct loader_info*))kernel_entry;
-	println(WSTR("No more logs on screen. See serial"));
+	llogs(WL_INFO, "No more logs on screen. See serial");
 
 	st->BootServices->ExitBootServices(ih, map_key);
 	kernel_start(&info);

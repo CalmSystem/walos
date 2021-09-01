@@ -3,7 +3,7 @@
 static struct linear_frame_buffer s_lfb = {0};
 static inline void vga_setup(struct linear_frame_buffer* lfb) { s_lfb = *lfb; }
 
-static const enum w_fn_sign_type vga_info_sign[] = {ST_OVAL, ST_OVAL};
+static const enum w_fn_sign_type vga_info_sign[] = {ST_PTR, ST_PTR};
 static cstr vga_info(const void** argv, void** retv, struct k_runtime_ctx* ctx) {
 	if (!s_lfb.base_addr) return "No graphical output";
 
@@ -12,7 +12,7 @@ static cstr vga_info(const void** argv, void** retv, struct k_runtime_ctx* ctx) 
 	*(int32_t*)retv[0] = 0;
 	return NULL;
 }
-static const enum w_fn_sign_type vga_put_sign[] = {ST_I32, ST_I32, ST_VEC, ST_CLEN, ST_I32, ST_I32};
+static const enum w_fn_sign_type vga_put_sign[] = {ST_I32, ST_I32, ST_ARR, ST_LEN, ST_I32, ST_I32};
 static cstr vga_put(const void** argv, void** retv, struct k_runtime_ctx* ctx) {
 	if (!s_lfb.base_addr) return "No graphical output";
 
@@ -43,5 +43,7 @@ static cstr vga_put(const void** argv, void** retv, struct k_runtime_ctx* ctx) {
 	return NULL;
 }
 
-static const k_signed_call vga_info_call = {vga_info, {"vga", "info", 1, 2, vga_info_sign}};
-static const k_signed_call vga_put_call = {vga_put, {"vga", "put", 1, 6, vga_put_sign}};
+static const k_signed_call vga_features[] = {
+	{vga_info, {"vga", "info", 1, 2, vga_info_sign}},
+	{vga_put, {"vga", "put", 1, 6, vga_put_sign}}
+};

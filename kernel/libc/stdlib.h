@@ -26,6 +26,4 @@ void free(void* ptr);
 
 int rand(void);
 
-#define lengthof(arr) (sizeof(arr)/sizeof(arr[0]))
-
 #endif

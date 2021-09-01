@@ -5,27 +5,31 @@
 #include "acpi.c.h"
 #include "memory.h"
 #include "vga.c.h"
+#include "x86.c.h"
 
 void _start(struct loader_info *info) {
 	interrupt_disable();
 
-	serial_puts("Serial: Ready\n");
+	llogs(WL_DEBUG, "Serial: Ready");
 
 	memory_setup(&info->mmap);
 	if (info->initrd.list) initrd = &info->initrd;
 
-	size_t featurecnt = 0;
+	size_t i_feature = lengthof(x86_features);
 	if (info->lfb) {
 		vga_setup(info->lfb);
-		featurecnt += 2;
+		i_feature += lengthof(vga_features);
+		// MAYBE: log to screen
 	}
 
+	const size_t featurecnt = i_feature;
 	k_signed_call features[featurecnt];
-	size_t i_feature = 0;
-	if (info->lfb) {
-		// MAYBE: log to screen
-		features[i_feature++] = vga_info_call;
-		features[i_feature++] = vga_put_call;
+	i_feature = 0;
+	for (size_t i = 0; i < lengthof(x86_features); i++) {
+		features[i_feature++] = x86_features[i];
+	}
+	for (size_t i = 0; info->lfb && i < lengthof(vga_features); i++) {
+		features[i_feature++] = vga_features[i];
 	}
 
 	struct os_ctx_t os_ctx = {
@@ -42,6 +46,6 @@ void _start(struct loader_info *info) {
 	};
 	os_entry(&os_ctx);
 
-	serial_puts("OS Stopped\n");
+	llogs(WL_INFO, "OS Stopped");
 	acpi_shutdown(info->acpi_rsdp);
 }

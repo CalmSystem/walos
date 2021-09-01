@@ -19,7 +19,7 @@ LDFLAGS += -strip-all
 RELEASE_LOCK := $(BUILD_DIR)release.lock
 $(shell $(RM) -f $(BUILD_DIR)debug.lock)
 else
-CFLAGS += -O1 -g -ggdb -DDEBUG=1
+CFLAGS += -O1 -g -DDEBUG=1
 RELEASE_LOCK := $(BUILD_DIR)debug.lock
 $(shell $(RM) -f $(BUILD_DIR)release.lock)
 endif
@@ -54,7 +54,6 @@ KERNEL_LIB := $(KERNEL_BUILD_DIR)kernel.a
 include $(LOADER_ROOT_DIR)loader.mk
 include $(ENGINE_ROOT_DIR)engine.mk
 include $(KERNEL_ROOT_DIR)kernel.mk
--include $(ENTRY)/entry.mk
 
 -include $(LOADER_DEPS) $(KERNEL_DEPS) $(ENGINE_DEPS)
 
@@ -62,7 +61,18 @@ LOADER_SRV_DIR ?= $(LOADER_TARGET)/srv/
 LOADER_TARGET ?= $(LOADER)-has-no-target
 LOADER_PACKAGE ?= $(LOADER)-has-no-package
 LOADER_ENTRY := $(LOADER_SRV_DIR)$(ENTRY_NAME)
-ENTRY_WASM ?= $(ENTRY)
+ENTRY_EXT := $(suffix $(ENTRY))
+ifeq ($(ENTRY_EXT), .wasm)
+ENTRY_WASM := $(ENTRY)
+else
+ifeq ($(ENTRY_EXT),)
+ENTRY_WASM := $(ENTRY).wasm
+-include $(ENTRY)/entry.mk
+else
+ENTRY_WASM := $(ENTRY).wasm
+-include $(dir $(ENTRY))/entry$(ENTRY_EXT).mk
+endif
+endif
 
 # Recipes
 .PHONY: clean all default build run package $(LOADER_RUN)

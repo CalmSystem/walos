@@ -1,10 +1,12 @@
 #ifndef __KERNEL_TYPES_H
 #define __KERNEL_TYPES_H
 
-#include <stdlib.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "../mod/sign.h"
+#include "../shr/sign.h"
+
+#define lengthof(arr) (sizeof(arr)/sizeof(arr[0]))
 
 typedef const char* cstr;
 /** Kernel iovec */

@@ -1,4 +1,4 @@
-#include <vga.h>
+#include <w/vga.h>
 #include <wasm.tga.h>
 
 uint8_t _binary_wasm_tga[];
