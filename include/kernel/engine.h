@@ -8,20 +8,21 @@
 /** Parsed program */
 typedef struct engine_module engine_module;
 /** Booted program */
-typedef struct engine_module engine_runtime;
-/** Exported function */
-typedef struct engine_module engine_export_fn;
+typedef struct engine_runtime engine_runtime;
 
-struct engine_code_ref {
+typedef size_t (*engine_code_stream_fn)(void* stream_arg, uint8_t* ptr, size_t len, size_t offset);
+struct engine_code_reader {
 	cstr name;
-	// MAYBE: stream code
-	const uint8_t* code;
+	union {
+		const uint8_t* static_code;
+		engine_code_stream_fn stream_fn;
+	};
+	void* stream_arg;
 	uint64_t code_size;
 };
 
-typedef cstr (*engine_generic_call)(struct k_refvec args, struct k_refvec rets);
 struct engine_runtime_ctx {
-	k_signed_call* (*linker)(struct k_runtime_ctx*, struct k_fn_decl);
+	const k_signed_call* (*linker)(struct k_runtime_ctx*, struct k_fn_decl);
 };
 enum engine_boot_flags {
 	PG_NO_FLAG = 0,
@@ -33,7 +34,7 @@ enum engine_boot_flags {
 /** Engine class */
 typedef struct engine {
 	/** Parse program */
-	engine_module* (*parse)(struct engine*, struct engine_code_ref);
+	engine_module* (*parse)(struct engine*, struct engine_code_reader);
 	/** List imported functions */
 	size_t (*list_imports)(engine_module*, struct k_fn_decl* decls, size_t declcnt, size_t offset);
 	/** List exported functions */
@@ -42,11 +43,9 @@ typedef struct engine {
 	void (*free_module)(engine_module*);
 
 	/** Boot program */
-	engine_runtime* (*boot)(engine_module*, uint64_t stack_size, enum engine_boot_flags flags, struct k_runtime_ctx* ctx);
-	/** List exported function */
-	engine_export_fn *(*get_export)(engine_runtime*, struct k_fn_decl);
-	/** Call exported function */
-	int (*call)(engine_export_fn*, struct k_refvec args, struct k_refvec rets);
+	engine_runtime* (*boot)(engine_module*, uint64_t stack_size, enum engine_boot_flags flags, struct engine_runtime_ctx* ctx);
+	/** Callable exported function */
+	bool (*get_export)(engine_runtime*, struct k_fn_decl, k_signed_call* out);
 	/** Free runtime */
 	void (*free_runtime)(engine_runtime*);
 } engine;

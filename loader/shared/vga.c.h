@@ -3,25 +3,25 @@
 static struct linear_frame_buffer s_lfb = {0};
 static inline void vga_setup(struct linear_frame_buffer* lfb) { s_lfb = *lfb; }
 
-static const enum w_fn_sign_type vga_info_sign[] = {ST_PTR, ST_PTR};
-static cstr vga_info(const void** argv, void** retv, struct k_runtime_ctx* ctx) {
+static const w_fn_sign_val vga_info_sign[] = {ST_PTR, ST_PTR};
+static K_SIGNED_HDL(vga_info) {
 	if (!s_lfb.base_addr) return "No graphical output";
 
-	*(uint32_t*)argv[0] = s_lfb.width;
-	*(uint32_t*)argv[1] = s_lfb.height;
-	*(int32_t*)retv[0] = 0;
+	*(uint32_t*)_args[0] = s_lfb.width;
+	*(uint32_t*)_args[1] = s_lfb.height;
+	K__RET(int32_t, 0) = 0;
 	return NULL;
 }
-static const enum w_fn_sign_type vga_put_sign[] = {ST_I32, ST_I32, ST_ARR, ST_LEN, ST_I32, ST_I32};
-static cstr vga_put(const void** argv, void** retv, struct k_runtime_ctx* ctx) {
+static const w_fn_sign_val vga_put_sign[] = {ST_I32, ST_I32, ST_ARR, ST_LEN, ST_I32, ST_I32};
+static K_SIGNED_HDL(vga_put) {
 	if (!s_lfb.base_addr) return "No graphical output";
 
-	const uint32_t start_x = *(const uint32_t*)argv[0];
-	const uint32_t start_y = *(const uint32_t*)argv[1];
-	const uint32_t *const pxs = argv[2];
-	const uint32_t npx = (*(const uint32_t*)argv[3]) / sizeof(uint32_t);
-	const uint32_t size_x = *(const uint32_t*)argv[4];
-	const uint32_t size_y = *(const uint32_t*)argv[5];
+	const uint32_t start_x = K__GET(uint32_t, 0);
+	const uint32_t start_y = K__GET(uint32_t, 1);
+	const uint32_t *const pxs = _args[2];
+	const uint32_t npx = (K__GET(uint32_t, 3)) / sizeof(uint32_t);
+	const uint32_t size_x = K__GET(uint32_t, 4);
+	const uint32_t size_y = K__GET(uint32_t, 5);
 
 	uint32_t ipx = 0;
 	for (uint32_t y = start_y; y < start_y + size_y && y < s_lfb.height; y++) {
@@ -39,11 +39,14 @@ static cstr vga_put(const void** argv, void** retv, struct k_runtime_ctx* ctx) {
 		}
 	}
 
-	*(int32_t*)retv[0] = 0;
+	K__RET(int32_t, 0) = 0;
 	return NULL;
 }
 
-static const k_signed_call vga_features[] = {
-	{vga_info, {"vga", "info", 1, 2, vga_info_sign}},
-	{vga_put, {"vga", "put", 1, 6, vga_put_sign}}
+static k_signed_call_table vga_feats = {
+	NULL, 2, {
+		{vga_info, NULL, {"vga", "info", 1, 2, vga_info_sign}},
+		{vga_put, NULL, {"vga", "put", 1, 6, vga_put_sign}}
+	}
 };
+static k_signed_call_table no_vga_feats = { NULL, 0 };

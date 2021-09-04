@@ -18,6 +18,7 @@ static inline char w_fn_sign2char(enum w_fn_sign_type s) {
 	case ST_REFV: return 'R';
 	case ST_CIO: return 'C';
 	case ST_BIO: return 'B';
+	default: return '?';
 	}
 }
 static inline enum w_fn_sign_type w_fn_char2sign(char c) {
@@ -44,8 +45,8 @@ static inline enum w_fn_sign_type w_fn_char2sign(char c) {
 	default: return ST_VAL;
 	}
 }
-static inline cstr w_fn_sign2str_r(struct k_fn_decl d, char* in) {
-	char* s = in;
+static inline cstr w_fn_sign2str_r(struct k_fn_decl d, char* io) {
+	char* s = io;
 	if (d.retc == 0)
 		*(s++) = 'v';
 	else {
@@ -58,11 +59,29 @@ static inline cstr w_fn_sign2str_r(struct k_fn_decl d, char* in) {
 	}
 	*(s++) = ')';
 	*(s++) = '\0';
-	return in;
+	return io;
+}
+static inline size_t w_fn_sign2str_len(struct k_fn_decl d) {
+	return (d.retc ? d.retc : 1) + 2 + d.argc;
 }
 static inline cstr w_fn_sign2str(struct k_fn_decl d) {
 	static char buf[32];
 	return w_fn_sign2str_r(d, buf);
+}
+
+static inline size_t w_fn_str2sign(cstr in, enum w_fn_sign_type* out) {
+	while (*in && *in != '(') in++;
+	if (*in++ != '(') return 0;
+
+	cstr end = in;
+	while (*end && *end != ')') end++;
+	if (*end != ')' || *(end+1)) return 0;
+
+	const size_t argc = end - in;
+	for (size_t i = 0; i < argc; i++) {
+		out[i] = w_fn_char2sign(in[i]);
+	}
+	return argc;
 }
 
 static inline bool k_fn_decl_flat(struct k_fn_decl decl) {

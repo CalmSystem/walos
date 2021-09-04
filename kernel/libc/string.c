@@ -577,3 +577,32 @@ char *strtok(char *s, const char *delim)
 
 	return strsep(&holder, delim);
 }
+
+#include <ctype.h>
+int strcasecmp(const char *s1, const char *s2)
+{
+	unsigned char ch;
+	int d = 0;
+
+	while (1) {
+		d = (int)(ch = tolower(*s1++)) - tolower(*s2++);
+		if (d || !ch)
+			break;
+	}
+
+	return d;
+}
+
+int strncasecmp(const char *s1, const char *s2, size_t n)
+{
+	unsigned char ch;
+	int d = 0;
+
+	while (n--) {
+		d = (int)(ch = tolower(*s1++)) - tolower(*s2++);
+		if (d || !ch)
+			break;
+	}
+
+	return d;
+}

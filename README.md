@@ -84,7 +84,7 @@ Message | Possible solution
   * elf/ - Linux binary loader
 * engine/ - WASM engine implementations
   * wasm3/ - [WASM3](https://github.com/wasm3/wasm3) interpreter
-* srv/ - Services implementations
+* service/ - Services implementations
 * sample/ - Sample entry points
   * hello/ - Print `Hello world`
   * vga/ - Display `wasm.tga` on screen and wait

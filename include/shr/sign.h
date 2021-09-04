@@ -15,5 +15,8 @@ enum w_fn_sign_type {
 	ST_CIO, /* Vector of const sized pointers (len in w_ciovec is next) */
 	ST_BIO /* Vector of sized pointers (len in w_iovec is next) */
 };
+/* Int containing enum w_fn_sign_type.
+ * Packed enum are not windows abi compatible */
+typedef int8_t w_fn_sign_val;
 
 #endif

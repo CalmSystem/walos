@@ -5,7 +5,7 @@ AR := llvm-ar
 
 ARCH ?= x86_64
 KERNEL_ABI := elf
-ENTRY_NAME ?= entry.wasm
+ENTRY_NAME := entry.wasm
 
 ROOT_DIR ?= $(dir $(firstword $(MAKEFILE_LIST)))
 BUILD_DIR ?= $(ROOT_DIR)build/
@@ -51,9 +51,14 @@ KERNEL_ROOT_DIR := $(ROOT_DIR)kernel/
 KERNEL_BUILD_DIR := $(BUILD_DIR)kernel/$(KERNEL_ABI)/
 KERNEL_LIB := $(KERNEL_BUILD_DIR)kernel.a
 
+# Services
+SERVICE_ROOT_DIR := $(ROOT_DIR)service/
+SERVICE_BUILD_DIR := $(BUILD_DIR)service/
+
 include $(LOADER_ROOT_DIR)loader.mk
 include $(ENGINE_ROOT_DIR)engine.mk
 include $(KERNEL_ROOT_DIR)kernel.mk
+include $(SERVICE_ROOT_DIR)service.mk
 
 -include $(LOADER_DEPS) $(KERNEL_DEPS) $(ENGINE_DEPS)
 
@@ -61,6 +66,7 @@ LOADER_SRV_DIR ?= $(LOADER_TARGET)/srv/
 LOADER_TARGET ?= $(LOADER)-has-no-target
 LOADER_PACKAGE ?= $(LOADER)-has-no-package
 LOADER_ENTRY := $(LOADER_SRV_DIR)$(ENTRY_NAME)
+
 ENTRY_EXT := $(suffix $(ENTRY))
 ifeq ($(ENTRY_EXT), .wasm)
 ENTRY_WASM := $(ENTRY)
@@ -75,20 +81,21 @@ endif
 endif
 
 # Recipes
-.PHONY: clean all default build run package $(LOADER_RUN)
+.PHONY: clean all default build run package $(LOADER_RUN) $(LOADER_ENTRY)
 
 $(RELEASE_LOCK): $(ROOT_DIR)Makefile
 	$(MKDIR_P) $(dir $@)
 	touch $@
 
-$(LOADER_ENTRY): $(ENTRY_WASM) $(LOADER_TARGET)
+$(LOADER_ENTRY): $(ENTRY_WASM) $(SERVICE_OUT)
 	$(MKDIR_P) $(dir $@)
-	$(CP) $< $@
+	$(CP) $(SERVICE_OUT) $(dir $@)
+	$(CP) $(ENTRY_WASM) $@
 
-build: $(LOADER_ENTRY)
+build: $(LOADER_TARGET) $(LOADER_ENTRY)
 	@echo "Target at $(LOADER_TARGET) !"
-run: $(LOADER_ENTRY) $(LOADER_RUN)
-package: $(LOADER_ENTRY) $(LOADER_PACKAGE)
+run: $(LOADER_RUN)
+package: $(LOADER_PACKAGE)
 	@echo "Package at $(LOADER_PACKAGE) !"
 
 all: package

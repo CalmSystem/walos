@@ -25,4 +25,5 @@ void _start() {
 
 	struct w_ciovec ov = {input_line, input_len};
 	stdio_write(&ov, 1);
+	stdio_putc('\n');
 }

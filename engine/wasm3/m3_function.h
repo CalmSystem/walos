@@ -49,6 +49,7 @@ typedef struct M3Function
 
     cstr_t                  names[d_m3MaxDuplicateFunctionImpl];
     u16                     numNames;                               // maximum of d_m3MaxDuplicateFunctionImpl
+    cstr_t                  exportModule;
 
     IM3FuncType             funcType;
 

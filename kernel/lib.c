@@ -1,26 +1,31 @@
 #include "lib.h"
 #include <stdlib.h>
-#include <kernel/engine.h>
+#include <string.h>
+#include "linker.h"
+#include "service.h"
 #include <kernel/log.h>
-#include <kernel/sign_tools.h>
-#include <utils/xxd.h>
 
 #define ENTRY_NAME "entry.wasm"
 
-static void srv_list_cb(void*, const struct loader_srv_file_t*, size_t);
-static void entry_run();
-
-static const struct os_ctx_t* s_ctx;
-const struct loader_handle *loader_get_handle() { return &s_ctx->handle; }
-const struct loader_features *loader_get_feats() { return &s_ctx->feats; }
-
-static bool s_running = true;
-static inline void shutdown() { s_running = false; }
+static const struct loader_handle* s_loader_hdl;
+const struct loader_handle *loader_get_handle() { return s_loader_hdl; }
 
 static engine* s_engine;
 
-void os_entry(const struct os_ctx_t* ctx) {
-	s_ctx = ctx;
+static bool os_boot(struct service*, bool allow_partial_linking);
+
+struct services_page {
+	struct services_page* next;
+	struct service base[]; /* SRV_PAGE_SIZE len */
+};
+static struct services_page* s_services = NULL;
+#define SRV_PAGE_SIZE ((PAGE_SIZE - offsetof(struct services_page, base)) / sizeof(struct service))
+
+static struct service* service_read_next();
+
+void os_entry(const struct loader_ctx_t* ctx) {
+	s_loader_hdl = &ctx->handle;
+	linker_set_features(ctx);
 	logs(WL_EMERG, "Starting OS");
 #if DEBUG
 	logs(WL_NOTICE, "DEBUG mode enabled");
@@ -37,153 +42,164 @@ void os_entry(const struct os_ctx_t* ctx) {
 	}
 
 	logs(WL_NOTICE, "Loading services");
-	loader_get_handle()->srv_list(0, srv_list_cb, NULL);
-
-	while (s_running)
-		ctx->handle.wait();
-}
-
-static struct loader_srv_file_t entry_file = {0};
-static void srv_list_cb(void* offset, const struct loader_srv_file_t* files, size_t n_files) {
-	if (!n_files) {
-		entry_run();
+	struct service* entry;
+	do {
+		entry = service_read_next();
+	} while (entry && strcasecmp("entry", entry->code.name) != 0);
+	if (!entry) {
+		logs(WL_EMERG, ENTRY_NAME " not found");
 		return;
 	}
 
-	for (size_t i = 0; i < n_files; i++) {
-		logf(WL_INFO, "Found service: %s\n", files[i].name);
-
-		if (strcmp(files[i].name, ENTRY_NAME) == 0)
-			entry_file = files[i];
-		//TODO: create service
-		//TODO: register exports
-	}
-
-	/* Loading next */
-	size_t next = (size_t)offset + n_files;
-	loader_get_handle()->srv_list(next, srv_list_cb, (void*)next);
+	entry->imports = linker_get_user_table();
+	if (os_boot(entry, true))
+		logs(WL_DEBUG, "Entry finished");
 }
 
-struct k_runtime_ctx {
-	struct engine_runtime_ctx engine;
-	cstr name;
-};
-static enum w_fn_sign_type __stdio_write_sign[] = {ST_CIO, ST_LEN};
-static cstr stdlib_stdio_write(const void **args, void **rets, struct k_runtime_ctx* ctx) {
-	const k_iovec* iovs = args[0];
-	w_size icnt = *(const w_size*)args[1];
-	for (w_size i = 0; i < icnt; i++) {
-		loader_get_handle()->log(iovs[i].base, iovs[i].len);
-	}
-	*(w_res*)rets[0] = W_SUCCESS;
-	return NULL;
+static inline bool is_service_present(struct service* p) {
+	return p && p->e_ctx.linker == linker_link_srv;
 }
-static cstr stdlib_stdio_putc(const void **args, void **rets, struct k_runtime_ctx* ctx) {
-	loader_get_handle()->log((const char*)args[0], 1);
-	*(w_res*)rets[0] = W_SUCCESS;
-	return NULL;
-}
-static cstr stdlib_stdio_none(const void **args, void **rets, struct k_runtime_ctx* ctx) {
-	return "No stdin";
-}
+static struct service* service_read_next() {
+	static size_t s_offset = 0;
+	struct loader_srv_file_t file;
+	if (!loader_get_handle()->srv_list(&file, 1, s_offset))
+		return NULL;
 
-#include <kernel/log_fmt.h>
-static inline void stdlib_log_(cstr str, unsigned len) {
-	loader_get_handle()->log(str, len);
-}
-static enum w_fn_sign_type __log_write_sign[] = {ST_VAL, ST_CIO, ST_LEN};
-static cstr stdlib_log_write(const void **args, void **rets, struct k_runtime_ctx* ctx) {
-	enum w_log_level lvl = *(const uint32_t*)args[0];
-	if (__builtin_expect(lvl < WL_EMERG || lvl > WL_DEBUG, 0)) return "Invalid log level";
-	const k_iovec* iovs = args[1];
-	w_size icnt = *(const w_size*)args[2];
-	klog_prefix(stdlib_log_, lvl, ctx->name);
-	for (w_size i = 0; i < icnt; i++) {
-		stdlib_log_(iovs[i].base, iovs[i].len);
-	}
-	klog_suffix(stdlib_log_, !icnt || *((cstr)iovs[icnt-1].base + iovs[icnt-1].len - 1) != '\n');
-	return NULL;
-}
+	s_offset++;
 
-static struct k_signed_call stdlib[] = {
-	{stdlib_stdio_write, {"stdio", "write", 1, 2, __stdio_write_sign}},
-	{stdlib_stdio_putc,  {"stdio", "putc", 1, 1, NULL}},
-	{stdlib_stdio_none,  {"stdio", "getc", 1, 0, NULL}},
-	{stdlib_log_write,  {"log", "write", 0, 3, __log_write_sign}}
-};
-
-static k_signed_call* entry_linker(struct k_runtime_ctx* self, struct k_fn_decl decl) {
-	struct loader_features libs[] = { //TODO: by process ctx
-		{stdlib, lengthof(stdlib)},
-		*loader_get_feats()
-	};
-	if (stdlib[2].fn == stdlib_stdio_none) {
-		struct k_fn_decl kw_key_read_decl = {"hw", "key_read", 1, 0, NULL};
-		for (size_t i = 0; i < loader_get_feats()->len; i++) {
-			if (k_fn_decl_match(kw_key_read_decl, loader_get_feats()->ptr[i].decl) < 0)
-				continue;
-
-			stdlib[2].fn = loader_get_feats()->ptr[i].fn;
-			break;
+	struct service* s = NULL;
+	{
+		struct services_page** pp = &s_services;
+		for (;!s && *pp; pp = &(*pp)->next) {
+			for (size_t i = 0; i < SRV_PAGE_SIZE; i++) {
+				if (!is_service_present((*pp)->base + i)) {
+					s = (*pp)->base + i;
+					break;
+				}
+			}
+		}
+		if (!s) {
+			*pp = (void*)loader_get_handle()->take_pages(1);
+			(*pp)->next = NULL;
+			s = (*pp)->base;
 		}
 	}
+	memset(s, 0, sizeof(*s));
 
-	for (size_t j = 0; j < lengthof(libs); j++) {
-		for (size_t i = 0; i < libs[j].len; i++) {
-			int res;
-			if ((res = k_fn_decl_match(decl, libs[j].ptr[i].decl)) < 0)
-				continue;
-			if (res == 0)
-				logf(WL_NOTICE, "Suppose signature for %s:%s %s\n",
-					decl.mod, decl.name, w_fn_sign2str(libs[j].ptr[i].decl));
-			return &libs[j].ptr[i];
-		}
+	const size_t file_name_len = strlen(file.name);
+	{
+		const size_t srv_name_len = file_name_len - (
+			strcasecmp(".wasm", file.name + file_name_len - 5) == 0 ? 5 : 0);
+		char* srv_name = malloc(srv_name_len + 1);
+		memcpy(srv_name, file.name, srv_name_len);
+		srv_name[srv_name_len] = '\0';
+		s->code.name = srv_name;
 	}
-	logf(WL_CRIT, "Cannot link %s:%s %s\n", decl.mod, decl.name, w_fn_sign2str(decl));
-	return NULL;
-}
-static void entry_read_cb(void *offset, size_t part_size) {
-	size_t read = (size_t)offset + part_size;
-	if (read >= entry_file.size) {
-		engine_module* entry_mod = s_engine->parse(s_engine, (struct engine_code_ref){
-			ENTRY_NAME, entry_file.data, entry_file.size });
-		if (!entry_mod) {
-			logs(WL_CRIT, "Failed to parse entry");
-			shutdown();
-			return;
-		}
 
-		logs(WL_NOTICE, "Running " ENTRY_NAME);
-		struct k_runtime_ctx ctx = {{entry_linker}, entry_file.name};
-		if (!s_engine->boot(entry_mod, 2048, PG_LINK_FLAG | PG_START_FLAG, &ctx)) {
-			logs(WL_CRIT, "Failed to run entry");
-		}
-		shutdown();
+	s->imports = linker_get_service_table();
+	s->e_ctx.linker = linker_link_srv;
 
+	s->code.code_size = file.size;
+	if (file.data) {
+		s->code.static_code = file.data;
 	} else {
-		if (read) /* Read more */
-			loader_get_handle()->srv_read(entry_file.name, (uint8_t*)entry_file.data + read,
-				entry_file.size - read, read, entry_read_cb, (void*)read);
-		else {
-			logs(WL_CRIT, ENTRY_NAME " not readable");
-			*(char *)entry_file.data = '\0';
-			shutdown();
+		s->code.stream_fn = (engine_code_stream_fn)loader_get_handle()->srv_read; // Cast cstr arg to void*
+		s->code.stream_arg = malloc(file_name_len + 1);
+		memcpy(s->code.stream_arg, file.name, file_name_len + 1);
+	}
+
+	logf(WL_INFO, "Found service: %s", s->code.name);
+	return s;
+}
+static inline void service_unload(struct service* s) {
+	if (!is_service_present(s)) return;
+
+	logf(WL_NOTICE, "Unloading service %s", s->code.name);
+	if (s->runtime) s_engine->free_runtime(s->runtime);
+	else if (s->parsed) s_engine->free_module(s->parsed);
+
+	free((void*)s->code.name);
+	if (s->code.stream_arg) free(s->code.stream_arg);
+	s->imports = NULL;
+	s->e_ctx.linker = NULL;
+	const k_signed_call_table* exp = s->exports;
+	while (exp) {
+		void* prev = (void*)exp;
+		exp = (k_signed_call_table*)exp->next;
+		free(prev);
+	}
+}
+
+static bool os_parse(struct service* s) {
+	if (s->parsed) return true;
+	logf(WL_DEBUG, "Parsing %s", s->code.name);
+	s->parsed = s_engine->parse(s_engine, s->code);
+	if (!s->parsed)
+		logf(WL_CRIT, "Failed to parse %s", s->code.name);
+	return s->parsed;
+}
+static inline bool lk_import(void* arg, struct k_fn_decl* out, size_t offset) {
+	return s_engine->list_imports(arg, out, 1, offset);
+}
+struct lk_export_t {
+	struct service *const caller;
+	struct service *cur;
+	size_t n_e;
+	struct services_page* page;
+	size_t n_s;
+};
+static inline void* lk_export(void* arg, struct k_fn_decl* out) {
+	struct lk_export_t* self = arg;
+	while (1) {
+		// Find next export
+		if (is_service_present(self->cur) && self->cur != self->caller) {
+			if (os_parse(self->cur)) {
+				while (1) {
+					if (!s_engine->list_exports(self->cur->parsed, out, 1, self->n_e))
+						break;
+
+					self->n_e++;
+					return self->cur;
+				}
+			} else
+				service_unload(self->cur);
+		}
+		// Find next service
+		self->n_e = 0;
+		if (self->page) {
+			self->cur = self->page->base + self->n_s;
+			self->n_s++;
+			if (self->n_s >= SRV_PAGE_SIZE) {
+				self->n_s = 0;
+				self->page = self->page->next;
+			}
+		} else {
+			self->cur = service_read_next();
+			if (!self->cur) return NULL;
 		}
 	}
 }
-static void entry_run() {
-	if (!entry_file.name) {
-		logs(WL_CRIT, ENTRY_NAME " not found");
-		shutdown();
-		return;
+static inline bool lk_fn(void* arg, k_signed_call* out) {
+	struct service *const s = arg;
+	if (!(is_service_present(s) && os_boot(s, false))) return false;
+	return s_engine->get_export(s->runtime, out->decl, out);
+}
+static bool os_boot(struct service* s, bool allow_partial_linking) {
+	if (s->runtime) return true;
+	if (!os_parse(s)) return false;
+
+	logf(WL_DEBUG, "Linking %s", s->code.name);
+	struct lk_export_t ex = {s, NULL, 0, s_services, 0};
+	bool partial = allow_partial_linking;
+	s->imports = linker_bind_table(s->imports, &partial, lk_import, s->parsed, lk_export, &ex, lk_fn);
+	if (partial) {
+		logf(WL_ERR, "Failed to fully link %s", s->code.name);
+		if (!allow_partial_linking) return false;
 	}
 
-	if (entry_file.data) {
-		entry_read_cb((void*)entry_file.size, 0);
-	} else {
-		logs(WL_DEBUG, "Reading " ENTRY_NAME);
-		entry_file.data = calloc(1, entry_file.size+1);
-		loader_get_handle()->srv_read(entry_file.name, (void*)entry_file.data,
-			entry_file.size, 0, entry_read_cb, (void *)0);
-	}
+	logf(WL_DEBUG, "Booting %s", s->code.name);
+	s->runtime = s_engine->boot(s->parsed, 2048, PG_LINK_FLAG | PG_START_FLAG, &s->e_ctx);
+	if (!s->runtime)
+		logf(WL_CRIT, "Failed to boot %s", s->code.name);
+	return s->runtime;
 }

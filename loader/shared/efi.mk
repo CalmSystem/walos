@@ -29,5 +29,5 @@ endif
 EFI_QFLAGS := $(QFLAGS) -bios $(OVMF)
 EFI_QROOT := -drive format=raw,file=fat:rw:
 
-$(LOADER_RUN): $(LOADER_TARGET)
+$(LOADER_RUN): build
 	$(QEMU) $(EFI_QFLAGS) $(EFI_QROOT)$(LOADER_TARGET)

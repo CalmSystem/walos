@@ -669,6 +669,26 @@ M3Result  m3_GetGlobal  (IM3Global                 i_global,
     return m3Err_none;
 }
 
+M3Result  m3_ParseGlobal  (IM3Global                 i_global,
+                           IM3TaggedValue            o_value)
+{
+    if (not i_global) return m3Err_globalLookupFailed;
+
+	o_value->type = i_global->initExpr[0]-0x40;
+	bytes_t valueStart = i_global->initExpr + 1;
+	cbytes_t valueEnd = i_global->initExpr + i_global->initExprSize;
+
+    switch (o_value->type) {
+    case c_m3Type_i32: return ReadLEB_i32((i32*)&o_value->value.i32, &valueStart, valueEnd);
+    case c_m3Type_i64: return ReadLEB_i64((i64*)&o_value->value.i64, &valueStart, valueEnd);
+# if d_m3HasFloat
+    case c_m3Type_f32: return Read_f32(&o_value->value.f32, &valueStart, valueEnd);
+    case c_m3Type_f64: return Read_f64(&o_value->value.f64, &valueStart, valueEnd);
+# endif
+    default: return m3Err_invalidTypeId;
+    }
+}
+
 M3Result  m3_SetGlobal  (IM3Global                 i_global,
                          const IM3TaggedValue      i_value)
 {
@@ -1151,6 +1171,29 @@ uint8_t *  m3_GetMemory  (IM3Runtime i_runtime, uint32_t * o_memorySizeInBytes, 
 uint32_t  m3_GetMemorySize  (IM3Runtime i_runtime)
 {
     return i_runtime->memory.mallocated->length;
+}
+
+const uint8_t *  m3_ParseMemory (IM3Module i_module, uint32_t * o_memoryPartSizeInBytes, uint32_t i_memoryIndex, uint32_t i_memoryOffsetInBytes)
+{	d_m3Assert(i_memoryIndex == 0);
+
+	if (i_module) {
+		for (size_t i = 0; i < i_module->numDataSegments; i++)
+		{
+			M3DataSegment * segment = & i_module->dataSegments[i];
+			if (segment->memoryRegion != i_memoryIndex || segment->initExpr[0] != 0x41) continue;
+
+			bytes_t offsetPtr = segment->initExpr+1;
+			i32 offset;
+			ReadLEB_i32(&offset, &offsetPtr, segment->initExpr + segment->initExprSize);
+
+			if (i_memoryOffsetInBytes >= offset && i_memoryOffsetInBytes < offset + segment->size) {
+				*o_memoryPartSizeInBytes = i_memoryOffsetInBytes - offset + segment->size;
+				return segment->data + i_memoryOffsetInBytes - offset;
+			}
+		}
+	}
+
+	return NULL;
 }
 
 

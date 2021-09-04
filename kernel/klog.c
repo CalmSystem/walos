@@ -32,7 +32,7 @@ void klogf(enum w_log_level lvl, cstr ctx, cstr fmt, ...) {
 	_doprnt(fmt, args, 0, (void (*)())savechar, NULL);
 	va_end(args);
 	savechar(NULL, 0);
-	klog_suffix(log, false);
+	klog_suffix(log, true);
 
 	return;
 }

@@ -261,6 +261,11 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
     IM3Runtime          m3_GetModuleRuntime         (IM3Module i_module);
     IM3Environment      m3_GetModuleEnvironment     (IM3Module i_module);
 
+	const uint8_t*      m3_ParseMemory              (IM3Module              i_module,
+                                                     uint32_t *             o_memoryPartSizeInBytes,
+                                                     uint32_t               i_memoryIndex,
+													 uint32_t               i_memoryOffsetInBytes);
+
 //-------------------------------------------------------------------------------------------------------------------------------
 //  globals
 //-------------------------------------------------------------------------------------------------------------------------------
@@ -275,6 +280,9 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
 
     M3ValueType         m3_GetGlobalType            (IM3Global              i_global);
 
+	M3Result            m3_ParseGlobal              (IM3Global              i_global,
+                                                     IM3TaggedValue         o_value);
+
 //-------------------------------------------------------------------------------------------------------------------------------
 //  functions
 //-------------------------------------------------------------------------------------------------------------------------------
@@ -286,9 +294,10 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
                                                      const char * const     i_functionName);
 
 
-    M3Result  m3_FindImportFunction    (IM3Module       io_module,
-                                        uint32_t        i_skip,
-                                        IM3Function*    o_next);
+    M3Result            m3_FindFunctionDecl         (IM3Module       io_module,
+                                                     uint8_t         i_exported,
+                                                     uint32_t        i_skip,
+                                                     IM3Function*    o_function);
 
     uint32_t            m3_GetArgCount              (IM3Function i_function);
     uint32_t            m3_GetRetCount              (IM3Function i_function);
@@ -311,6 +320,7 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
     const char*         m3_GetFunctionName          (IM3Function i_function);
     IM3Module           m3_GetFunctionModule        (IM3Function i_function);
     M3Result            m3_GetFunctionImportName    (IM3Function i_function, const char** o_mod, const char** o_name);
+    M3Result            m3_GetFunctionExportName    (IM3Function i_function, const char** o_mod, const char** o_name);
 
 //-------------------------------------------------------------------------------------------------------------------------------
 //  debug info

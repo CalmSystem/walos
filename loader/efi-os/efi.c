@@ -93,18 +93,17 @@ static inline void load_initrd(struct fake_initrd* init) {
 		goto err;
 	}
 
-	char *name_buffer = NULL;
-	uint64_t name_buffer_len = 0;
-
 	uint8_t buf[2*sizeof(struct EFI_FILE_INFO)];
 	while (1) {
-		for (uintn_t i = 0; i < sizeof(buf); i++) buf[i] = 0;
-		uintn_t size = sizeof(buf);
-		if (srv_dir->Read(srv_dir, &size, buf) & EFI_ERR || size == 0) break;
-		if (size > sizeof(buf)) {
-			llogs(WL_CRIT, "Service name too long");
-			init->count = 0;
-			return;
+		{
+			for (uintn_t i = 0; i < sizeof(buf); i++) buf[i] = 0;
+			uintn_t size = sizeof(buf);
+			if (srv_dir->Read(srv_dir, &size, buf) & EFI_ERR || size == 0) break;
+			if (size > sizeof(buf)) {
+				llogs(WL_CRIT, "Service name too long");
+				init->count = 0;
+				return;
+			}
 		}
 		struct EFI_FILE_INFO* info = (void*)buf;
 
@@ -114,16 +113,8 @@ static inline void load_initrd(struct fake_initrd* init) {
 		if (strlen_utf8(info->FileName, (sizeof(buf) - sizeof(*info)) / sizeof(char16_t), &name_size) < 0 || !name_size) continue;
 
 		struct loader_srv_file_t *entry = init->list + init->count;
-		if (name_buffer_len <= name_size) {
-			const uint64_t pages = EFI_TO_PAGES(name_size+1);
-			system_table->BootServices->AllocatePages(AllocateAnyPages, EfiRuntimeServicesData, pages, (uint64_t*)&name_buffer);
-			name_buffer_len = pages * 0x1000;
-		}
-		sto_utf8(info->FileName, (sizeof(buf) - sizeof(*info)) / sizeof(char16_t), name_buffer);
-		name_buffer[name_size] = '\0';
-		entry->name = name_buffer;
-		name_buffer += name_size+1;
-		name_buffer_len -= name_size+1;
+		sto_utf8(info->FileName, (sizeof(buf) - sizeof(*info)) / sizeof(char16_t), (char*)entry->name);
+		((char*)entry->name)[name_size] = '\0';
 		entry->size = info->FileSize;
 		EFI_FILE_PROTOCOL *file = NULL;
 		srv_dir->Open(srv_dir, &file, info->FileName, EFI_FILE_MODE_READ, 0);

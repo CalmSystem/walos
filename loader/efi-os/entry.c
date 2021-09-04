@@ -14,25 +14,9 @@ void _start(struct loader_info *info) {
 
 	memory_setup(&info->mmap);
 	if (info->initrd.list) initrd = &info->initrd;
+	if (info->lfb) vga_setup(info->lfb);
 
-	size_t i_feature = lengthof(x86_features);
-	if (info->lfb) {
-		vga_setup(info->lfb);
-		i_feature += lengthof(vga_features);
-		// MAYBE: log to screen
-	}
-
-	const size_t featurecnt = i_feature;
-	k_signed_call features[featurecnt];
-	i_feature = 0;
-	for (size_t i = 0; i < lengthof(x86_features); i++) {
-		features[i_feature++] = x86_features[i];
-	}
-	for (size_t i = 0; info->lfb && i < lengthof(vga_features); i++) {
-		features[i_feature++] = vga_features[i];
-	}
-
-	struct os_ctx_t os_ctx = {
+	const struct loader_ctx_t ctx = {
 		{
 			.log=loader_log,
 			.wait=loader_wait,
@@ -40,11 +24,11 @@ void _start(struct loader_info *info) {
 			.release_pages=loader_free,
 			.srv_list=loader_srv_list,
 			.srv_read=loader_srv_read
-		}, {
-			features, featurecnt
-		}
+		},
+		.hw_feats=&x86_feats,
+		.usr_feats=info->lfb ? &vga_feats : &no_vga_feats
 	};
-	os_entry(&os_ctx);
+	os_entry(&ctx);
 
 	llogs(WL_INFO, "OS Stopped");
 	acpi_shutdown(info->acpi_rsdp);

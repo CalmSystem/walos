@@ -3,6 +3,7 @@
 #include "types.h"
 #include "../shr/log.h"
 
-W_FN(log, write, "v(.Cc)", void, (enum w_log_level lvl, const w_ciovec* ovs, w_size ocnt))
+/** Probably log somewhere */
+W_FN(log, write, void, (enum w_log_level lvl, const w_ciovec* ovs, w_size ocnt), {ST_VAL, ST_CIO, ST_LEN})
 
 #endif

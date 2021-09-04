@@ -96,6 +96,9 @@ void  Function_Release  (IM3Function i_function)
 
     FreeImportInfo (& i_function->import);
 
+	if (i_function->exportModule)
+		m3_Free (i_function->exportModule);
+
     if (i_function->ownsWasmCode)
         m3_Free (i_function->wasm);
 
@@ -231,7 +234,8 @@ u32  GetFunctionNumArgsAndLocals (IM3Function i_function)
         return 0;
 }
 
-M3Result  m3_FindImportFunction    (IM3Module       io_module,
+M3Result  m3_FindFunctionDecl      (IM3Module       io_module,
+                                    uint8_t         i_exported,
                                     u32             i_skip,
                                     IM3Function*    o_next)
 {
@@ -239,7 +243,7 @@ M3Result  m3_FindImportFunction    (IM3Module       io_module,
     {
         IM3Function f = & io_module->functions [i];
 
-        if (f->import.moduleUtf8 and f->import.fieldUtf8)
+        if ((f->import.moduleUtf8 and f->import.fieldUtf8) ^ !!i_exported)
         {
             if (i_skip > 0) {
                 i_skip--;
@@ -259,5 +263,29 @@ M3Result m3_GetFunctionImportName(IM3Function i_function, const char **o_mod, co
 		*o_name = i_function->import.fieldUtf8;
 		return m3Err_none;
 	}
+	return m3Err_functionLookupFailed;
+}
+M3Result m3_GetFunctionExportName(IM3Function i_function, const char **o_mod, const char **o_name)
+{
+	*o_mod = i_function->exportModule;
+	*o_name = NULL;
+	for (u16 i = 0; i < i_function->numNames; i++) {
+		const char* sep = strchr(i_function->names[i], ':');
+		if (sep) {
+			if (!*o_mod) {
+				size_t len = sep - i_function->names[i];
+				char* mod;
+				*o_mod = i_function->exportModule = mod = malloc(len + 1);
+				memcpy(mod, i_function->names[i], len);
+				mod[len] = '\0';
+			}
+			*o_name = sep+1;
+			return m3Err_none;
+		} else if (*o_name) {
+			*o_name = i_function->names[i];
+		}
+	}
+	if (!*o_mod) *o_mod = "env";
+	if (!*o_name) *o_name = "<unamed>";
 	return m3Err_functionLookupFailed;
 }

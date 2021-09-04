@@ -67,8 +67,11 @@ typedef int32_t w_res;
 #define W_EXPORT_NAMED(name) __attribute__((visibility("default"), export_name(name))) W_C_ABI
 #define W_EXPORT_AS(mod, name) W_EXPORT_NAMED(W_SNAME(mod, name))
 
-#define W_LINK_INFO(mod, name, type, val) W_EXPORT const char *const __##mod##_##name##_##type = val;
-#define W_LINK_SIGN(mod, name, val) W_LINK_INFO(mod, name, sign, val)
+#if W_NO_LINK_SIGN
+#define W_LINK_SIGN(mod, name, ...) ;
+#else
+#define W_LINK_SIGN(mod, name, ...) W_EXPORT const w_fn_sign_val __##mod##_##name##_sign[] = __VA_ARGS__;
+#endif
 
 #ifndef W_FN_
 /** Imported function (flat) */
@@ -76,12 +79,13 @@ typedef int32_t w_res;
 #endif
 #ifndef W_FN
 /** Imported function (signed) */
-#define W_FN(mod, name, sign, ret, args) W_LINK_SIGN(mod, name, sign) W_FN_(mod, name, ret, args)
+#define W_FN(mod, name, ret, args, ...) W_FN_(mod, name, ret, args) W_LINK_SIGN(mod, name, __VA_ARGS__)
 #endif
 
 /** Exported function handler (flat) */
-#define W_FN_HDL_(mod, name, ret, args) W_EXPORT_AS(mod, name) __attribute__((overloadable)) ret W_CNAME(mod, name) args
+#define W_FN_HDL_(mod, name, ret, args) W_EXPORT_AS(mod, name) ret W_CNAME(mod, name) args
 /** Exported function handler (signed) */
-#define W_FN_HDL(mod, name, sign, ret, args) W_LINK_SIGN(mod, name, sign) W_FN_HDL_(mod, name, ret, args)
+#define W_FN_HDL(mod, name, ret, args, ...) W_LINK_SIGN(mod, name, __VA_ARGS__) W_FN_HDL_(mod, name, ret, args)
+#define W_FN_HDL_REWRITE __attribute__((overloadable))
 
 #endif

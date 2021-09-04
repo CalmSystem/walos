@@ -19,9 +19,9 @@ unsigned long long strtoull(const char *, char **, int);
 
 void abort(void);
 
-void* malloc(size_t size);
-void* calloc(size_t num, size_t size);
-void* realloc(void* ptr, size_t size);
+void* malloc(size_t size) __attribute__((malloc, alloc_size(1)));
+void* calloc(size_t num, size_t size) __attribute__((alloc_size(1, 2)));
+void* realloc(void* ptr, size_t size) __attribute__((alloc_size(2)));
 void free(void* ptr);
 
 int rand(void);

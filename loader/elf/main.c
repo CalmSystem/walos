@@ -20,30 +20,29 @@ static void loader_wait() {
 	sleep(1); /* Sleep for now */
 }
 
-static void loader_srv_list(size_t to_skip, void (*cb)(void *arg, const struct loader_srv_file_t *files, size_t nfiles), void *arg) {
+static size_t loader_srv_list(struct loader_srv_file_t* files, size_t nfiles, size_t offset) {
 
 	DIR *srv_dir = opendir("srv");
-	if (!srv_dir) {
-		cb(arg, NULL, 0);
-		return;
-	}
+	if (!srv_dir) return 0;
 
-	struct dirent* info;
-	while (1) {
+	size_t read = 0;
+	while (read < nfiles + offset) {
+		struct dirent* info;
 		if ((info = readdir(srv_dir)) == NULL) {
 			/* No more files */
-			cb(arg, NULL, 0);
 			break;
 		}
 
 		if (info->d_type != DT_REG) continue;
 
-		if (to_skip > 0) {
-			to_skip--;
+		if (offset) {
+			offset--;
 			continue;
 		}
 
-		struct loader_srv_file_t srv = {info->d_name, 0, NULL};
+		struct loader_srv_file_t* file = &files[read++];
+		strncpy((char*)file->name, info->d_name, sizeof(file->name));
+		file->data = NULL;
 		{
 			struct stat st = {0};
 			size_t d_len = strlen(info->d_name);
@@ -51,15 +50,13 @@ static void loader_srv_list(size_t to_skip, void (*cb)(void *arg, const struct l
 			memcpy(path, "srv/", 4);
 			memcpy(path+4, info->d_name, d_len+1);
 			stat(path, &st);
-			srv.size = st.st_size;
+			file->size = st.st_size;
 		}
-		cb(arg, &srv, 1);
-		break;
 	}
 	closedir(srv_dir);
-
+	return read;
 }
-static void loader_srv_read(cstr name, void *ptr, size_t len, size_t offset, void (*cb)(void *arg, size_t read), void *arg) {
+static size_t loader_srv_read(cstr name, uint8_t *ptr, size_t len, size_t offset) {
 
 	FILE *file = NULL;
 	{
@@ -69,23 +66,21 @@ static void loader_srv_read(cstr name, void *ptr, size_t len, size_t offset, voi
 		memcpy(path + 6, name, d_len + 1);
 		file = fopen(path, "r");
 	}
-	if (!file) {
-		cb(arg, 0);
-		return;
-	}
+	if (!file) return 0;
 
 	fseek(file, 0, SEEK_END);
 	size_t size = ftell(file);
 	if (size > offset) {
-		if (len > size - offset) len = size - offset;
+		if (len > size - offset)
+			len = size - offset;
+
 		fseek(file, offset, SEEK_SET);
 		len = fread(ptr, 1, len, file);
-	} else 
+	} else
 		len = 0;
 
 	fclose(file);
-	cb(arg, len);
-
+	return len;
 }
 
 /* NOTE: system libc replace kernel malloc and free.
@@ -104,24 +99,27 @@ static inline void hw_key_restore() {
 		tcsetattr(STDIN_FILENO, TCSANOW, &s_old_tio);
 	}
 }
-static cstr hw_key_read(const void** argv, void** retv, struct k_runtime_ctx* ctx) {
+static K_SIGNED_HDL(hw_key_read) {
 	if (!s_old_tio.c_lflag) {
 		tcgetattr(STDIN_FILENO, &s_old_tio);
 		struct termios new_tio = s_old_tio;
 		new_tio.c_lflag &= (~ICANON & ~ECHO);
 		tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
 	}
-	*(char*)retv[0] = getchar();
+	K__RET(char, 0) = getchar();
 	return NULL;
 }
 
+static k_signed_call_table hw_feats = {
+	NULL, 1, {
+		{hw_key_read, NULL, {"hw", "key_read", 1, 0, NULL}}
+	}
+};
+static k_signed_call_table usr_feats = { NULL, 0 };
 int main(int argc, char const *argv[]) {
 	llogs(WL_NOTICE, "ELF loader");
 
-	struct k_signed_call features[] = {
-		{hw_key_read, {"hw", "key_read", 1, 0, NULL}}
-	};
-	struct os_ctx_t os_ctx = {
+	const struct loader_ctx_t ctx = {
 		{
 			.log=loader_log,
 			.wait=loader_wait,
@@ -129,11 +127,11 @@ int main(int argc, char const *argv[]) {
 			.release_pages=loader_free,
 			.srv_list=loader_srv_list,
 			.srv_read=loader_srv_read
-		}, {
-			features, lengthof(features)
-		}
+		},
+		.hw_feats=&hw_feats,
+		.usr_feats=&usr_feats
 	};
-	os_entry(&os_ctx);
+	os_entry(&ctx);
 	llogs(WL_INFO, "OS Stopped");
 
 	hw_key_restore();
