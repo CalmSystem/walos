@@ -1,6 +1,6 @@
 #define K_CTX "linker"
 #include "linker.h"
-#include "service.h"
+#include "process.h"
 #include <kernel/sign_tools.h>
 #include <stdlib.h>
 
@@ -33,13 +33,13 @@ void linker_set_features(const struct loader_ctx_t* ctx) {
 static inline void call_log_(cstr str, unsigned len) {
 	loader_get_handle()->log(str, len);
 }
-static const w_fn_sign_val __log_write_sign[] = {ST_VAL, ST_CIO, ST_LEN};
-static K_SIGNED_HDL(call_log_write) {
+static const w_fn_sign_val __sys_log_sign[] = {ST_VAL, ST_CIO, ST_LEN};
+static K_SIGNED_HDL(call_sys_log) {
 	enum w_log_level lvl = K__GET(uint32_t, 0);
 	if (__builtin_expect(lvl < WL_EMERG || lvl > WL_DEBUG, 0)) return "Invalid log level";
 	const k_iovec* iovs = _args[1];
 	w_size icnt = K__GET(w_size, 2);
-	klog_prefix(call_log_, lvl, k_ctx2srv_name(ctx));
+	klog_prefix(call_log_, lvl, k_ctx2proc_name(ctx));
 	for (w_size i = 0; i < icnt; i++) {
 		call_log_(iovs[i].base, iovs[i].len);
 	}
@@ -53,7 +53,7 @@ static K_SIGNED_HDL(call_sys_tick) {
 const k_signed_call_table* linker_get_bottom_table() {
 	static const k_signed_call_table s_ = {
 		NULL, 2, {
-			{call_log_write, NULL, {"log", "write", 0, 3, __log_write_sign}},
+			{call_sys_log, NULL, {"sys", "log", 0, 3, __sys_log_sign}},
 			{call_sys_tick, NULL, {"sys", "tick", 0, 0, NULL}}
 		}
 	};
@@ -77,11 +77,29 @@ static K_SIGNED_HDL(call_stdio_putc) {
 	K__RET(w_res, 0) = W_SUCCESS;
 	return NULL;
 }
+static const w_fn_sign_val __sys_exec_sign[] = {ST_ARR, ST_LEN, ST_ARR, ST_LEN};
+static K_SIGNED_HDL(call_sys_exec) {
+	cstr name = _args[0];
+
+	if (strlen(name) >= K__GET(w_size, 1)) {
+		K__RET(w_res, 0) = W_EFAULT;
+		return NULL;
+	}
+	k_pid pid = w_proc_exec(name, _args[2], K__GET(w_size, 3), k_ctx2proc(ctx));
+	if (pid == NO_PID) {
+		K__RET(w_res, 0) = W_EFAIL;
+		return NULL;
+	}
+	w_proc_kill(pid, k_ctx2proc(ctx));
+	K__RET(w_res, 0) = W_SUCCESS;
+	return NULL;
+}
 const k_signed_call_table* linker_get_user_table() {
 	static k_signed_call_table s_ = {
-		NULL, 2, {
+		NULL, 3, {
 			{call_stdio_write, NULL, {"stdio", "write", 1, 2, __stdio_write_sign}},
-			{call_stdio_putc, NULL, {"stdio", "putc", 1, 1, NULL}}
+			{call_stdio_putc, NULL, {"stdio", "putc", 1, 1, NULL}},
+			{call_sys_exec, NULL, {"sys", "exec", 1, 4, __sys_exec_sign}}
 		}
 	};
 	if (__builtin_expect(!s_.next, false)) {
@@ -91,17 +109,17 @@ const k_signed_call_table* linker_get_user_table() {
 	return s_ctx->usr_feats;
 }
 
-const k_signed_call* linker_link_srv(struct k_runtime_ctx* ctx, struct k_fn_decl decl) {
+const k_signed_call* linker_link_proc(struct k_runtime_ctx* ctx, struct k_fn_decl decl) {
 	const k_signed_call* out;
-	int res = table_find(k_ctx2srv(ctx)->imports, decl, &out);
+	int res = table_find(k_ctx2proc(ctx)->imports, decl, &out);
 	if (res < 0) {
 		logf(WL_CRIT, "Cannot link %s->%s:%s %s",
-			k_ctx2srv_name(ctx), decl.mod, decl.name, w_fn_sign2str(decl));
+			k_ctx2proc_name(ctx), decl.mod, decl.name, w_fn_sign2str(decl));
 		return NULL;
 	}
 	if (res == 0)
 		logf(WL_NOTICE, "Suppose signature for %s->%s:%s %s",
-			k_ctx2srv_name(ctx), decl.mod, decl.name, w_fn_sign2str(out->decl));
+			k_ctx2proc_name(ctx), decl.mod, decl.name, w_fn_sign2str(out->decl));
 
 	return out;
 }

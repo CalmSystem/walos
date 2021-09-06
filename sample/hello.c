@@ -11,5 +11,5 @@ void _start() {
 	stdio_write(hello_io_vs, lengthof(hello_io_vs));
 	stdio_putc('!');
 	stdio_putc('\n');
-	log_write(WL_INFO, hello_log_vs, lengthof(hello_log_vs));
+	sys_log(WL_INFO, hello_log_vs, lengthof(hello_log_vs));
 }

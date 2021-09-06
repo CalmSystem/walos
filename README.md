@@ -1,8 +1,8 @@
 # walos
 
-WebAssembly Language based Operating System is a toy OS using the [Language-based System](https://en.wikipedia.org/wiki/Language-based_system) approach. Unlike generalist OS, walos ignores hardware protection (Ring0, single address space). This idea simplifies the system architecture and improves performance by avoiding context switching.
+WebAssembly Language based Operating System is a toy OS using the [Language-based System](https://en.wikipedia.org/wiki/Language-based_system) approach. Unlike generalist OS, walos ignores hardware protection (Ring0, single address space). This idea simplifies the system architecture and improves performance by avoiding context switching. On the downside, the OS is not protected against CPU side-channel attacks.
 
-Processes and drivers are [WASM](https://webassembly.org/) binary converted to sandboxed during runtime. By avoiding hardware protection toggle, syscalls are simple function calls triggered using interfaces like [WASI](https://wasi.dev/). So drivers can be implemented in any language targeting WebAssembly.
+Processes and drivers *(services)* are [WASM](https://webassembly.org/) binary executed by design in a sandboxed environment. By avoiding hardware protection, syscalls are simple function calls triggered using interfaces like [WASI](https://wasi.dev/). So drivers can be implemented in any language targeting WebAssembly.
 
 ## Built With
 
@@ -31,7 +31,7 @@ Processes and drivers are [WASM](https://webassembly.org/) binary converted to s
 ### Prerequisites
 
 OS | Needed | Optional
--- | -- | -- | --
+--- | --- | --- | ---
 Debian / Ubuntu | `make clang lld` | `qemu-system ovmf mtools xorriso`
 Arch / Manjaro | `make clang lld` | `qemu edk2-ovmf mtools libisoburn`
 
@@ -86,8 +86,10 @@ Message | Possible solution
   * wasm3/ - [WASM3](https://github.com/wasm3/wasm3) interpreter
 * service/ - Services implementations
 * sample/ - Sample entry points
-  * hello/ - Print `Hello world`
+  * entry.c - Makefile for `*.c`
+  * hello.c - Print `Hello world`
   * vga/ - Display `wasm.tga` on screen and wait
+  * exec/ - Run `embed.c` using system WASM engine
   * shell/ - Interactive shell using [WAPM](https://wapm.io/)
 
 ### Outputs

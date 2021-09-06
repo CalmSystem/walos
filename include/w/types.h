@@ -42,6 +42,8 @@ typedef int32_t w_res;
 
 /** No error occurred */
 #define W_SUCCESS (0)
+/** Error - Undeffined */
+#define W_EFAIL (1)
 /** Error - Bad address */
 #define W_EFAULT (21)
 /** Error - Invalid argument */

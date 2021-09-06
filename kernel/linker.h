@@ -1,7 +1,7 @@
 #include "lib.h"
 
 void linker_set_features(const struct loader_ctx_t*);
-const k_signed_call* linker_link_srv(struct k_runtime_ctx* ctx, struct k_fn_decl decl);
+const k_signed_call* linker_link_proc(struct k_runtime_ctx* ctx, struct k_fn_decl decl);
 
 const k_signed_call_table* linker_bind_table(
 	const k_signed_call_table*, bool* is_partial,
