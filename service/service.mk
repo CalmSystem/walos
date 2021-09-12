@@ -17,5 +17,5 @@ $(SERVICE_BUILD_DIR)%.wasm: $(SERVICE_ROOT_DIR)%.c
 ifeq ($(CUSTOM_LINK), 1)
 	$(error Custom link section unimplemented)
 else
-	$(CC) $(WASM_FLAGS) -Wl,--entry=_initialize $^ -o $@
+	$(CC) $(WASM_FLAGS) -Wl,--no-entry -DW_LOW_ENTRY=_initialize $^ -o $@
 endif

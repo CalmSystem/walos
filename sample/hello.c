@@ -1,5 +1,5 @@
+#include <w/main>
 #include <w/stdio.h>
-#include <w/log.h>
 
 const struct w_ciovec hello_io_vs[] = {
 	{"Hello ", 6}, {"world", 5}

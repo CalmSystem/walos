@@ -1,0 +1,15 @@
+#ifndef __MOD_ENTRY_H
+#define __MOD_ENTRY_H
+#include "bottom.h"
+
+#ifndef W_LOW_ENTRY
+#define W_LOW_ENTRY _start
+#endif
+#define W_MAIN() \
+__attribute__((weak)) void __wasm_call_ctors(void); \
+static inline void __usr_main(); \
+W_EXPORT void W_LOW_ENTRY () \
+{ if (__wasm_call_ctors) { __wasm_call_ctors(); } __usr_main(); } \
+static inline void __usr_main()
+
+#endif

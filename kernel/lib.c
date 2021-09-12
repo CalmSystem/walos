@@ -137,7 +137,7 @@ static struct process* service_read_next() {
 
 static inline struct process* proc_by_pid(k_pid id) {
 	// MAYBE: add generation counter
-	if (__builtin_expect(id >= NO_PID, 0)) return NULL;
+	if (UNLIKELY(id >= NO_PID)) return NULL;
 	for (struct processes_table* pt = s_procs; pt; pt = pt->next) {
 		if (id < PROC_TAB_SIZE) {
 			if (!is_process_present(pt->base + id)) break;

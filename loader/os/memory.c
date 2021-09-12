@@ -75,7 +75,7 @@ void memory_setup(struct efi_memory_map* m) {
 		EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((char*)m->ptr + i * m->desc_size);
 		state.free += desc->numPages;
 		if (desc->type == EFI_CONVENTIONAL_MEMORY && desc->numPages > largest_segment_pages) {
-			largest_segment = desc->physAddr;
+			largest_segment = (void*)desc->physAddr;
 			largest_segment_pages = desc->numPages;
 		}
 	}
@@ -95,7 +95,7 @@ void memory_setup(struct efi_memory_map* m) {
 			desc->type != EFI_BOOTSERVICES_CODE &&
 			desc->type != EFI_BOOTSERVICES_DATA)
 		{
-			pagemap_reserve_n(desc->physAddr, desc->numPages);
+			pagemap_reserve_n((void*)desc->physAddr, desc->numPages);
 		}
 	}
 

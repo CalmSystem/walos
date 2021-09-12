@@ -1,8 +1,8 @@
+#include "wasm3.h"
 #include <kernel/engine.h>
 #define K_CTX "engine"
 #include <kernel/log.h>
 #include <kernel/sign_tools.h>
-#include "wasm3.h"
 
 /* Read all into static_code */
 static inline bool engine_code_unstream(struct engine_code_reader* ref) {
@@ -63,7 +63,7 @@ static inline void engine_m3_read_argv(IM3Module mod, struct k_fn_decl *d, bool 
 		d->argv = (const void*)m3_ParseMemory(mod, &mem_view_size, 0, sign_val.value.i32);
 		if (d->argv && mem_view_size >= d->argc) {
 			size_t i_ck = 0;
-			while (i_ck < d->argc && (d->argv[i_ck] >= ST_LEN && d->argv[i_ck] <= ST_CIO)) i_ck++;
+			while (i_ck < d->argc && (d->argv[i_ck] >= ST_LEN && d->argv[i_ck] <= ST_BIO)) i_ck++;
 			if (i_ck < d->argc) {
 				if (log) logf(WL_WARN, "Invalid format in global signature for %s->%s:%s %s",
 					m3_GetModuleName(mod), d->mod, d->name, w_fn_sign2str(*d));
@@ -163,7 +163,8 @@ static m3ApiRawFunction(engine_m3_link_signed) {
 			default:
 				break;
 			}
-			m3ApiCheckMem(args[i], len);
+			if (LIKELY(len > 0))
+				m3ApiCheckMem(args[i], len);
 		} else
 			args[i] = arg_p + i;
 	}

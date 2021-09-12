@@ -6,8 +6,6 @@ static inline char serial_getc() {
 	return x86_io_read8(COM1);
 }
 
-void _initialize() { }
-
 W_FN_HDL_(hw, key_read, char, ()) {
 	return serial_getc();
 }

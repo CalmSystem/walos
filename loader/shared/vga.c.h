@@ -1,7 +1,9 @@
 #include "lfb.h"
 
 static struct linear_frame_buffer s_lfb = {0};
-static inline void vga_setup(struct linear_frame_buffer* lfb) { s_lfb = *lfb; }
+static inline void vga_setup(struct linear_frame_buffer* lfb) {
+	memcpy(&s_lfb, lfb, sizeof(s_lfb));
+}
 
 static const w_fn_sign_val vga_info_sign[] = {ST_PTR, ST_PTR};
 static K_SIGNED_HDL(vga_info) {
@@ -27,11 +29,11 @@ static K_SIGNED_HDL(vga_put) {
 	for (uint32_t y = start_y; y < start_y + size_y && y < s_lfb.height; y++) {
 		uint32_t* const line_addr = (uint32_t*)s_lfb.base_addr + s_lfb.scan_line_size * y;
 		for (size_t x = start_x; x < start_x + size_x; x++) {
-			if (__builtin_expect(x > s_lfb.width, 0)) {
+			if (UNLIKELY(x > s_lfb.width)) {
 				ipx = (ipx + size_x - x) % npx;
 				break;
 			}
-			if (__builtin_expect(pxs[ipx] < (1 << 24), 1)) {
+			if (LIKELY(pxs[ipx] < (1 << 24))) {
 				line_addr[x] = s_lfb.use_bgr ? pxs[ipx] : /* BGR to RGB */
 					((pxs[ipx] & 0x00FF00) | ((pxs[ipx] >> 16) & 0xFF) | ((pxs[ipx] & 0xFF) << 16));
 			}

@@ -3,12 +3,17 @@
 #include <kernel/os.h>
 #include "../shared/lfb.h"
 
+typedef uint64_t uintptr_l;
+
 #ifndef __EFI_H
+#define EFI_MEMORY_RESERVED 0
+#define EFI_MEMORY_CONVENSIONAL 7
 /** UEFI memory block descriptor */
 typedef struct {
 	uint32_t type;
-	void* physAddr;
-	void* virtAddr;
+	uint32_t padding;
+	uintptr_l physAddr;
+	uintptr_l virtAddr;
 	uint64_t numPages;
 	uint64_t attribs;
 } EFI_MEMORY_DESCRIPTOR;
@@ -16,26 +21,26 @@ typedef struct {
 
 /** UEFI memory pages list */
 struct efi_memory_map {
-	void* ptr;
+	union {
+		void* ptr;
+		uintptr_l addr;
+	};
 	uint64_t size;
 	uint64_t desc_size;
 };
 
-/** Pseudo init ramdisk. Just a list of preloaded files */
-struct fake_initrd {
-	struct loader_srv_file_t* list;
-	uint64_t count;
-};
-
 #define K_PATH "boot\\kernel.elf"
-#define SRV_PATH "srv"
+#define ENTRY_PATH "entry.tar.gz"
 
 /** Informations from loader to kernel. Partial Multiboot2 infos */
 struct loader_info {
 	struct efi_memory_map mmap;
-	struct fake_initrd initrd;
-	void* acpi_rsdp;
-	struct linear_frame_buffer* lfb;
+	uintptr_l initrd; /* tar */
+	uintptr_l acpi_rsdp;
+	union {
+		struct linear_frame_buffer* ptr;
+		uintptr_l addr;
+	} lfb;
 };
 
 void _start(struct loader_info *info);

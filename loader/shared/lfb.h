@@ -15,7 +15,7 @@
 
 /** 32bit VGA like framebuffer */
 struct linear_frame_buffer {
-	void* base_addr;
+	uint64_t base_addr;
 	uint32_t width;
 	uint32_t height;
 	uint32_t scan_line_size;

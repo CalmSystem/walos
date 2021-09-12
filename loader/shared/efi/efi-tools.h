@@ -74,11 +74,12 @@ static inline int strlen_utf16(const char* s, uint64_t max_len, uint64_t *ret) {
 	if (ret) *ret = out_len;
 	return fit;
 }
-/** Convert valid string s to UTF-16. */
-static inline void sto_utf16(const char* s, uint64_t max_len, char16_t* out) {
+/** Convert valid string s to UTF-16. Return end of out */
+static inline char16_t* sto_utf16(const char* s, uint64_t max_len, char16_t* out) {
 	uint64_t i = 0;
 	while (i < max_len && s[i])
 		i += to_utf16(s + i, out++);
+	return out;
 }
 /** Convert first character of UTF-16(c) to UTF-8(res).
  *  Res must at least fit 4 tokens or accurately predict token count.
@@ -132,10 +133,11 @@ static inline int strlen_utf8(const char16_t* s, uint64_t max_len, uint64_t *ret
 	if (ret) *ret = out_len;
 	return fit;
 }
-/** Convert valid string UTF-16 s to UTF-8. */
-static inline void sto_utf8(const char16_t* s, uint64_t max_len, char* out) {
+/** Convert valid string UTF-16 s to UTF-8. Return end of out */
+static inline char* sto_utf8(const char16_t* s, uint64_t max_len, char* out) {
 	for (uint64_t i = 0; i < max_len && s[i]; i++)
 		out += to_utf8(s[i], out);
+	return out;
 }
 
 #define PRINT_BUFFER_MAX 128
@@ -362,7 +364,7 @@ static EFI_STATUS load_gop(struct linear_frame_buffer* lfb) {
         }
 	}
 
-	lfb->base_addr = (void*)gop->Mode->FrameBufferBase;
+	lfb->base_addr = gop->Mode->FrameBufferBase;
 	lfb->height = gop->Mode->Info->VerticalResolution;
 	lfb->width = gop->Mode->Info->HorizontalResolution;
 	lfb->scan_line_size = gop->Mode->Info->PixelsPerScanLine;

@@ -1,6 +1,7 @@
 #include <efi/efi-tools.h>
 #include <efi/protocol/efi-gop.h>
-#include <efi/elf.h>
+#include <elf.h>
+#include <uzlib/uzlib.h>
 #include "entry.h"
 
 static inline int memcmp(const void* aptr, const void* bptr, size_t n){
@@ -82,56 +83,57 @@ static inline void* load_acpi() {
 	return NULL;
 }
 
-static inline void load_initrd(struct fake_initrd* init) {
-	EFI_FILE_PROTOCOL *srv_dir = open_file(NULL, WSTR(SRV_PATH));
-	if (!srv_dir) goto err;
+static inline void* load_initrd() {
+	EFI_FILE_PROTOCOL *entry_file = open_file(NULL, WSTR(ENTRY_PATH));
+	if (!entry_file) goto err;
 
-	const uint64_t list_size = get_file_size(srv_dir) / sizeof(struct EFI_FILE_INFO) * sizeof(struct loader_srv_file_t);
-	system_table->BootServices->AllocatePages(AllocateAnyPages, EfiRuntimeServicesData, EFI_TO_PAGES(list_size), (uint64_t*)&init->list);
-	if (!init->list) {
-		srv_dir->Close(srv_dir);
-		goto err;
-	}
+	uint64_t file_size = get_file_size(entry_file);
+	unsigned char* file_data = NULL;
+	system_table->BootServices->AllocatePages(AllocateAnyPages, EfiRuntimeServicesData, EFI_TO_PAGES(file_size), (uint64_t*)&file_data);
+	const bool failed = !file_data || entry_file->Read(entry_file, &file_size, file_data);
+	entry_file->Close(entry_file);
+	if (failed) goto err;
 
-	uint8_t buf[2*sizeof(struct EFI_FILE_INFO)];
-	while (1) {
-		{
-			for (uintn_t i = 0; i < sizeof(buf); i++) buf[i] = 0;
-			uintn_t size = sizeof(buf);
-			if (srv_dir->Read(srv_dir, &size, buf) & EFI_ERR || size == 0) break;
-			if (size > sizeof(buf)) {
-				llogs(WL_CRIT, "Service name too long");
-				init->count = 0;
-				return;
-			}
+	// get decompressed length
+	uint64_t out_size = file_data[file_size-1];
+	out_size = 256*out_size + file_data[file_size-2];
+	out_size = 256*out_size + file_data[file_size-3];
+	out_size = 256*out_size + file_data[file_size-4];
+
+	unsigned char* out_data = NULL;
+	system_table->BootServices->AllocatePages(AllocateAnyPages, EfiRuntimeServicesData, EFI_TO_PAGES(out_size), (uint64_t*)&out_data);
+	if (!out_data) goto err;
+
+	uzlib_init();
+
+	struct uzlib_uncomp d;
+	uzlib_uncompress_init(&d, NULL, 0);
+
+	d.source = file_data;
+	d.source_limit = file_data + file_size - 4;
+	d.source_read_cb = NULL;
+	if (uzlib_gzip_parse_header(&d) != TINF_OK) goto err;
+
+	d.dest_start = d.dest = out_data;
+	int res;
+	for (uint64_t rem_size = out_size+1; rem_size;) {
+		const unsigned int OUT_CHUNK_SIZE = 1;
+		unsigned int chunk_len = rem_size < OUT_CHUNK_SIZE ? rem_size : OUT_CHUNK_SIZE;
+		d.dest_limit = d.dest + chunk_len;
+		res = uzlib_uncompress_chksum(&d);
+		rem_size -= chunk_len;
+		if (res != TINF_OK) {
+			break;
 		}
-		struct EFI_FILE_INFO* info = (void*)buf;
-
-		if (info->Attribute & EFI_FILE_DIRECTORY) continue;
-
-		uint64_t name_size;
-		if (strlen_utf8(info->FileName, (sizeof(buf) - sizeof(*info)) / sizeof(char16_t), &name_size) < 0 || !name_size) continue;
-
-		struct loader_srv_file_t *entry = init->list + init->count;
-		sto_utf8(info->FileName, (sizeof(buf) - sizeof(*info)) / sizeof(char16_t), (char*)entry->name);
-		((char*)entry->name)[name_size] = '\0';
-		entry->size = info->FileSize;
-		EFI_FILE_PROTOCOL *file = NULL;
-		srv_dir->Open(srv_dir, &file, info->FileName, EFI_FILE_MODE_READ, 0);
-		char *data = NULL;
-		system_table->BootServices->AllocatePages(AllocateAnyPages, EfiRuntimeServicesData, EFI_TO_PAGES(info->FileSize + 1), (EFI_PHYSICAL_ADDRESS *)&data);
-		file->Read(file, &info->FileSize, data);
-		data[info->FileSize] = '\0';
-		entry->data = data;
-		file->Close(file);
-		init->count++;
 	}
-	srv_dir->Close(srv_dir);
+	system_table->BootServices->FreePages((uint64_t)file_data, EFI_TO_PAGES(file_size));
+	if (res != TINF_DONE) goto err;
 
-	return;
+	return out_data;
 
 err:
-	println(WSTR("Failed to open services directory"));
+	println(WSTR("Failed to open services container"));
+	return NULL;
 }
 
 EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
@@ -146,14 +148,14 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 
 	struct loader_info info = {0};
 
-	info.acpi_rsdp = load_acpi();
+	info.acpi_rsdp = (uintptr_l)load_acpi();
 	if (!info.acpi_rsdp) return EFI_ERR;
 
-	load_initrd(&info.initrd);
-	if (!info.initrd.count) return EFI_ERR;
+	info.initrd = (uintptr_l)load_initrd();
+	if (!info.initrd) return EFI_ERR;
 
 	struct linear_frame_buffer lfb = {0};
-	if (load_gop(&lfb) == EFI_SUCCESS) info.lfb = &lfb;
+	if (load_gop(&lfb) == EFI_SUCCESS) info.lfb.addr = (uintptr_l)&lfb;
 
 	uintn_t map_key = 0;
 	{

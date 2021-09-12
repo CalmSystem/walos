@@ -31,7 +31,7 @@ MKDIR_P ?= @mkdir -p
 default: all
 
 # Loader
-LOADER ?= efi-app
+LOADER ?= os
 LOADER_ROOT_DIR := $(ROOT_DIR)loader/$(LOADER)/
 LOADER_BUILD_DIR := $(BUILD_DIR)loader/$(LOADER)/
 LOADER_RUN := run/loader/$(LOADER)
@@ -62,10 +62,9 @@ include $(SERVICE_ROOT_DIR)service.mk
 
 -include $(LOADER_DEPS) $(KERNEL_DEPS) $(ENGINE_DEPS)
 
-LOADER_SRV_DIR ?= $(LOADER_TARGET)/srv/
 LOADER_TARGET ?= $(LOADER)-has-no-target
 LOADER_PACKAGE ?= $(LOADER)-has-no-package
-LOADER_ENTRY := $(LOADER_SRV_DIR)$(ENTRY_NAME)
+LOADER_ENTRY ?= $(LOADER_TARGET)/entry.tar.gz
 
 ENTRY_EXT := $(suffix $(ENTRY))
 ifeq ($(ENTRY_EXT), .wasm)
@@ -79,20 +78,26 @@ ENTRY_WASM := $(ENTRY).wasm
 -include $(dir $(ENTRY))/entry$(ENTRY_EXT).mk
 endif
 endif
+ENTRY_TAR := $(BUILD_DIR)entry/$(subst /,_,$(ENTRY)).tar.gz
 
 # Recipes
-.PHONY: clean all default build run package $(LOADER_RUN) $(LOADER_ENTRY)
+.PHONY: clean all default build build/just run package $(LOADER_RUN)
 
 $(RELEASE_LOCK): $(ROOT_DIR)Makefile
 	$(MKDIR_P) $(dir $@)
 	touch $@
 
-$(LOADER_ENTRY): $(ENTRY_WASM) $(SERVICE_OUT)
+$(ENTRY_TAR): $(ENTRY_WASM) $(SERVICE_OUT)
+	$(MKDIR_P) $(BUILD_DIR)
+	$(CP) $(ENTRY_WASM) $(BUILD_DIR)$(ENTRY_NAME)
 	$(MKDIR_P) $(dir $@)
-	$(CP) $(SERVICE_OUT) $(dir $@)
-	$(CP) $(ENTRY_WASM) $@
+	tar -czf $@ --xform s:^.*/:: $(BUILD_DIR)$(ENTRY_NAME) $(SERVICE_OUT)
+$(LOADER_ENTRY): $(ENTRY_TAR)
+	$(MKDIR_P) $(dir $@)
+	$(CP) $^ $@
 
-build: $(LOADER_TARGET) $(LOADER_ENTRY)
+build/just: $(LOADER_TARGET) $(LOADER_ENTRY)
+build: build/just
 	@echo "Target at $(LOADER_TARGET) !"
 run: $(LOADER_RUN)
 package: $(LOADER_PACKAGE)

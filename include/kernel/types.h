@@ -7,6 +7,15 @@
 #include "../shr/sign.h"
 
 #define lengthof(arr) (sizeof(arr)/sizeof(arr[0]))
+#ifndef LIKELY
+#ifdef __GNUC__
+#define LIKELY(x) __builtin_expect(!!(x), 1)
+#define UNLIKELY(x) __builtin_expect(x, 0)
+#else
+#define LIKELY(x) (x)
+#define UNLIKELY(x) (x)
+#endif
+#endif
 
 typedef const char* cstr;
 /** Kernel iovec */

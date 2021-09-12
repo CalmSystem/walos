@@ -1,6 +1,4 @@
-#include <w/types.h>
-
-void _initialize() { }
+#include <w/main>
 
 W_FN_(hw, key_read, char, ())
 W_FN_HDL_(stdio, getc, char, ()) {

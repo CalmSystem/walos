@@ -8,7 +8,7 @@
 			"type": "cppdbg",
 			"request": "launch",
 			"name": "Attach QEMU (cppdbg)",
-			"program": "${workspaceRoot}/target/efi-os/boot/kernel.elf",
+			"program": "${workspaceRoot}/target/os/boot/kernel.elf",
 			"cwd": "${workspaceRoot}",
 			"args": [],
 			"MIMode": "gdb",
@@ -26,7 +26,7 @@
 					"ignoreFailures": true
 				},
 				{
-					"text": "file ${workspaceRoot}/target/efi-os/boot/kernel.elf",
+					"text": "file ${workspaceRoot}/target/os/boot/kernel.elf",
 					"description": "Load binary."
 				}
 			]
@@ -51,7 +51,7 @@
 			"type": "gdb",
 			"request": "attach",
 			"name": "Attach QEMU (gdb)",
-			"executable": "${workspaceRoot}/target/efi-os/boot/kernel.elf",
+			"executable": "${workspaceRoot}/target/os/boot/kernel.elf",
 			"target": ":1234",
 			"remote": true,
 			"cwd": "${workspaceRoot}",

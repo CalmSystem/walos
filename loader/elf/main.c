@@ -20,9 +20,10 @@ static void loader_wait() {
 	sleep(1); /* Sleep for now */
 }
 
+#define SRV_PATH "entry"
 static size_t loader_srv_list(struct loader_srv_file_t* files, size_t nfiles, size_t offset) {
 
-	DIR *srv_dir = opendir("srv");
+	DIR *srv_dir = opendir(SRV_PATH);
 	if (!srv_dir) return 0;
 
 	size_t read = 0;
@@ -44,11 +45,11 @@ static size_t loader_srv_list(struct loader_srv_file_t* files, size_t nfiles, si
 		strncpy((char*)file->name, info->d_name, sizeof(file->name));
 		file->data = NULL;
 		{
-			struct stat st = {0};
 			size_t d_len = strlen(info->d_name);
-			char path[5 + d_len];
-			memcpy(path, "srv/", 4);
-			memcpy(path+4, info->d_name, d_len+1);
+			char path[sizeof(SRV_PATH) + d_len + 1];
+			memcpy(path, SRV_PATH"/", sizeof(SRV_PATH));
+			memcpy(path+sizeof(SRV_PATH), info->d_name, d_len+1);
+			struct stat st = {0};
 			stat(path, &st);
 			file->size = st.st_size;
 		}
@@ -61,9 +62,9 @@ static size_t loader_srv_read(cstr name, uint8_t *ptr, size_t len, size_t offset
 	FILE *file = NULL;
 	{
 		size_t d_len = strlen(name);
-		char path[7 + d_len];
-		memcpy(path, "./srv/", 6);
-		memcpy(path + 6, name, d_len + 1);
+		char path[sizeof(SRV_PATH) + d_len + 1];
+		memcpy(path, SRV_PATH"/", sizeof(SRV_PATH));
+		memcpy(path+sizeof(SRV_PATH), name, d_len+1);
 		file = fopen(path, "r");
 	}
 	if (!file) return 0;

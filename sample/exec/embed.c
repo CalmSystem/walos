@@ -1,6 +1,6 @@
-#include <w/sys.h>
+#include <w/main>
 
-static const w_ciovec hello = {"Hello from sys:exec", 20};
-void _start() {
-	sys_log(WL_NOTICE, &hello, 1);
+W_MAIN() {
+	static const w_ciovec hello[] = W_IOBUF("Hello from sys:exec");
+	sys_log(WL_NOTICE, hello, 1);
 }

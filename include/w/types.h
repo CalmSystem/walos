@@ -36,6 +36,7 @@ typedef struct w_ciovec {
 	w_cptr base; /* Pointer to data. */
 	w_size len; /* Length of data. */
 } w_ciovec;
+#define W_IOBUF(str) {{str, sizeof(str)}}
 
 /** Result code */
 typedef int32_t w_res;

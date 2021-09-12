@@ -16,22 +16,24 @@ Processes and drivers *(services)* are [WASM](https://webassembly.org/) binary e
 ## Features
 
 * WASM runtime
-* Multi ABI kernel
-* UEFIx64 loaders
+* Multi loaders
+  * `os` (EFI standalone)
+  * `efi` (EFI runtime)
+  * `elf` (Unix executable)
 
 ### Planned
 
+* Bios loader
 * Multitasking
-* Dependency tree
+* Trim services tree
 * WASM custom section
-* Optional service streaming
 
 ## Getting started
 
 ### Prerequisites
 
 OS | Needed | Optional
---- | --- | --- | ---
+--- | --- | ---
 Debian / Ubuntu | `make clang lld` | `qemu-system ovmf mtools xorriso`
 Arch / Manjaro | `make clang lld` | `qemu edk2-ovmf mtools libisoburn`
 
@@ -42,11 +44,7 @@ Arch / Manjaro | `make clang lld` | `qemu edk2-ovmf mtools libisoburn`
 git clone https://github.com/CalmSystem/walos.git
 cd walos
 ```
-2. Compile system with all drivers
-```sh
-make all
-```
-3. Start `ENTRY` as **ELF binary**
+2. Start `ENTRY` as **ELF binary**
 ```sh
 make run ENTRY=sample/shell LOADER=elf
 ```
@@ -63,7 +61,7 @@ make package ENTRY=sample/hello.c
 
 Message | Possible solution
 --- | ---
-`recipe for target 'target/efi-app/srv/entry.wasm' failed` | `ENTRY` argument missing
+`No rule to make target '.wasm'` | `ENTRY` argument missing
 `llvm-ar: Command not found` | `export PATH=$PATH:/usr/lib/llvm-10/bin`
 `Executable "wasm-ld" doesn't exist!` | 🔼 🔼
 `lld: error: unable to find library -lc` | `export LDPATH=/usr/lib64`
@@ -79,8 +77,8 @@ Message | Possible solution
 * kernel/ - OS core library
   * libc/ - Freestanding libC
 * loader/ - Boot loaders implementations
-  * efi-app/ - In UEFI application
-  * efi-os/ - UEFI exit loader
+  * os/ - Standalone loader
+  * efi/ - UEFI application
   * elf/ - Linux binary loader
 * engine/ - WASM engine implementations
   * wasm3/ - [WASM3](https://github.com/wasm3/wasm3) interpreter

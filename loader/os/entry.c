@@ -8,13 +8,12 @@
 #include "x86.c.h"
 
 void _start(struct loader_info *info) {
+	llogs(WL_INFO, "Here");
 	interrupt_disable();
 
-	llogs(WL_DEBUG, "Serial: Ready");
-
 	memory_setup(&info->mmap);
-	if (info->initrd.list) initrd = &info->initrd;
-	if (info->lfb) vga_setup(info->lfb);
+	if (info->initrd) initrd = (void*)info->initrd;
+	if (info->lfb.ptr) vga_setup(info->lfb.ptr);
 
 	const struct loader_ctx_t ctx = {
 		{
@@ -26,10 +25,10 @@ void _start(struct loader_info *info) {
 			.srv_read=loader_srv_read
 		},
 		.hw_feats=&x86_feats,
-		.usr_feats=info->lfb ? &vga_feats : &no_vga_feats
+		.usr_feats=info->lfb.ptr ? &vga_feats : &no_vga_feats
 	};
 	os_entry(&ctx);
 
 	llogs(WL_INFO, "OS Stopped");
-	acpi_shutdown(info->acpi_rsdp);
+	acpi_shutdown((void*)info->acpi_rsdp);
 }

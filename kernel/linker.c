@@ -36,7 +36,7 @@ static inline void call_log_(cstr str, unsigned len) {
 static const w_fn_sign_val __sys_log_sign[] = {ST_VAL, ST_CIO, ST_LEN};
 static K_SIGNED_HDL(call_sys_log) {
 	enum w_log_level lvl = K__GET(uint32_t, 0);
-	if (__builtin_expect(lvl < WL_EMERG || lvl > WL_DEBUG, 0)) return "Invalid log level";
+	if (UNLIKELY(lvl < WL_EMERG || lvl > WL_DEBUG)) return "Invalid log level";
 	const k_iovec* iovs = _args[1];
 	w_size icnt = K__GET(w_size, 2);
 	klog_prefix(call_log_, lvl, k_ctx2proc_name(ctx));
@@ -102,7 +102,7 @@ const k_signed_call_table* linker_get_user_table() {
 			{call_sys_exec, NULL, {"sys", "exec", 1, 4, __sys_exec_sign}}
 		}
 	};
-	if (__builtin_expect(!s_.next, false)) {
+	if (UNLIKELY(!s_.next)) {
 		table_link(&s_, linker_get_bottom_table());
 		table_link(s_ctx->usr_feats, &s_);
 	}
