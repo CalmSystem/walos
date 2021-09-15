@@ -45,6 +45,7 @@ typedef cstr (*k_signed_call_fn)(self_t self, k_argv_t args, k_retv_t rets, stru
 #define K_SIGNED_HDL(name) cstr name(self_t self, k_argv_t _args, k_retv_t _rets, struct k_runtime_ctx* ctx)
 #define K__GET(type, idx) *(const type*)_args[idx]
 #define K__RET(type, idx) *(type*)_rets[idx]
+#define K__RES(res) { K__RET(int32_t, 0) = res; return NULL; }
 /** Well known function */
 typedef struct k_signed_call {
 	k_signed_call_fn fn;

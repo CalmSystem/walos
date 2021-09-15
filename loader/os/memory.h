@@ -8,7 +8,7 @@ struct memory_state_t {
 };
 
 /** Initialize page allocator */
-void memory_setup(struct efi_memory_map *);
+void memory_setup(struct memory_map *);
 /** Read informations about memory */
 void memory_get_state(struct memory_state_t *);
 

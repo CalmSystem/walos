@@ -132,8 +132,48 @@ static inline void* load_initrd() {
 	return out_data;
 
 err:
-	println(WSTR("Failed to open services container"));
+	llogs(WL_CRIT, "Failed to load initrd");
 	return NULL;
+}
+
+enum EFI_MEMORY_TYPE {
+	EFI_RESERVED_MEMORY = 0x00000000,
+	EFI_LOADER_CODE = 0x00000001,
+	EFI_LOADER_DATA = 0x00000002,
+	EFI_BOOTSERVICES_CODE = 0x00000003,
+	EFI_BOOTSERVICES_DATA = 0x00000004,
+	EFI_RUNTIMESERVICES_CODE = 0x00000005,
+	EFI_RUNTIMESERVICES_DATA = 0x00000006,
+	EFI_CONVENTIONAL_MEMORY = 0x00000007,
+	EFI_UNUSABLE_MEMORY = 0x00000008,
+	EFI_ACPI_RECLAIM_MEMORY = 0x00000009,
+	EFI_ACPI_NVS_MEMORY = 0x0000000a,
+	EFI_MAPPED_IO_MEMORY = 0x0000000b,
+	EFI_MAPPED_IO_PORTSPACE_MEMORY = 0x0000000c,
+	EFI_PALCODE_MEMORY = 0x0000000d,
+	EFI_PERSISTENT_MEMORY = 0x0000000e
+};
+static inline uintn_t load_mmap(struct memory_map *const mmap) {
+	uintn_t map_key = 0;
+	void *map = NULL;
+	uintn_t desc_size, map_size;
+	uint32_t desc_version;
+	EFI_STATUS err;
+	while ((err = system_table->BootServices->GetMemoryMap(&map_size, (EFI_MEMORY_DESCRIPTOR*)map, &map_key, &desc_size, &desc_version)) & EFI_ERR) {
+		if (map) system_table->BootServices->FreePool(map);
+		system_table->BootServices->AllocatePool(EfiLoaderData, map_size, &map);
+	}
+	mmap->count = map_size / desc_size;
+	mmap->ptr = map;
+	for (size_t i = 0; i < mmap->count; i++) {
+		EFI_MEMORY_DESCRIPTOR desc = *(EFI_MEMORY_DESCRIPTOR*)((char*)map + desc_size * i);
+		mmap->ptr[i].base = (void*)desc.PhysicalStart;
+		mmap->ptr[i].num_pages = desc.NumberOfPages;
+		mmap->ptr[i].type = desc.Type == EFI_CONVENTIONAL_MEMORY ? MEMORY_MAP_CONVENSIONAL :
+			desc.Type >= EFI_LOADER_CODE && desc.Type <= EFI_BOOTSERVICES_DATA ?
+			MEMORY_MAP_USABLE : MEMORY_MAP_RESERVED;
+	}
+	return map_key;
 }
 
 EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
@@ -148,26 +188,16 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 
 	struct loader_info info = {0};
 
-	info.acpi_rsdp = (uintptr_l)load_acpi();
+	info.acpi_rsdp = load_acpi();
 	if (!info.acpi_rsdp) return EFI_ERR;
 
-	info.initrd = (uintptr_l)load_initrd();
+	info.initrd = load_initrd();
 	if (!info.initrd) return EFI_ERR;
 
 	struct linear_frame_buffer lfb = {0};
-	if (load_gop(&lfb) == EFI_SUCCESS) info.lfb.addr = (uintptr_l)&lfb;
+	if (load_gop(&lfb) == EFI_SUCCESS) info.lfb = &lfb;
 
-	uintn_t map_key = 0;
-	{
-		EFI_MEMORY_DESCRIPTOR *map = NULL;
-		uint32_t desc_version;
-		EFI_STATUS err;
-		while ((err = st->BootServices->GetMemoryMap(&info.mmap.size, map, &map_key, &info.mmap.desc_size, &desc_version)) & EFI_ERR) {
-			if (map) st->BootServices->FreePool(map);
-			st->BootServices->AllocatePool(EfiLoaderData, info.mmap.size, (void **)&map);
-		}
-		info.mmap.ptr = map;
-	}
+	uintn_t map_key = load_mmap(&info.mmap);
 
 	__attribute__((sysv_abi)) void (*kernel_start)(struct loader_info*) = (__attribute__((sysv_abi)) void (*)(struct loader_info*))kernel_entry;
 	llogs(WL_INFO, "No more logs on screen. See serial");

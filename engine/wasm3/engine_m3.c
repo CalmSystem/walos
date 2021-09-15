@@ -196,7 +196,7 @@ static m3ApiRawFunction(engine_m3_link_signed) {
 				k_refs[j] = m3ApiOffsetToPtr(w_refs[j]);
 				m3ApiCheckMem(k_refs[j], 1);
 			}
-			ind_cnt += len * sizeof(k_iovec);
+			ind_cnt += len * sizeof(void*);
 			break;
 		}
 		default:

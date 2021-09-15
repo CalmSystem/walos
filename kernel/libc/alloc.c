@@ -54,11 +54,11 @@ static struct alloc_t alloc_get(void *ptr) {
 
 #define SLAB_MAX_EXP 7
 #define SLAB_SIZE (1 << SLAB_MAX_EXP)
-#define IS_SLAB(size) (size < SLAB_SIZE)
+#define IS_SLAB(size) (size <= SLAB_SIZE)
 #define BUDDY_MIN_EXP (SLAB_MAX_EXP+1)
 #define BUDDY_MAX_EXP 17
-#define BUDDY_MAX (1 << BUDDY_MAX_EXP)-1
-#define IS_BUDDY(size) (size <= BUDDY_MAX)
+#define BUDDY_MAX_SIZE (1 << BUDDY_MAX_EXP)
+#define IS_BUDDY(size) (size <= BUDDY_MAX_SIZE)
 
 #define TO_PAGES(size) ((size-1) / PAGE_SIZE + 1)
 

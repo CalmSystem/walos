@@ -2,8 +2,8 @@ include $(ROOT_DIR)loader/shared/qemu.mk
 LOADER_TARGET := $(TARGET_DIR)$(LOADER)
 
 OS_ELF := $(TARGET_DIR)$(LOADER)/boot/kernel.elf
-GRUB_ELF := $(TARGET_DIR)$(LOADER)/boot/grub/jmp.bin
 GRUB_CFG := $(TARGET_DIR)$(LOADER)/boot/grub/grub.cfg
+STIVALE_CFG := $(TARGET_DIR)$(LOADER)/boot/limine.cfg
 EFI_ELF := $(LOADER_TARGET)/efi/boot/bootx64.efi
 EFI_C := $(LOADER_ROOT_DIR)efi.c
 
@@ -19,23 +19,12 @@ $(OS_ELF): $(KERNEL_LIB) $(ENGINE_LIB) $(OS_LD) $(OS_OBJS)
 	$(MKDIR_P) $(dir $@)
 	$(LD) $(KERNEL_LDFLAGS) -static -Bsymbolic -nostdlib -z max-page-size=0x1000 -T $(OS_LD) $(OS_OBJS) $(KERNEL_LIB) $(ENGINE_LIB) -o $@
 
-
-GRUB_S := $(LOADER_ROOT_DIR)grub/start.s
-GRUB_C := $(LOADER_ROOT_DIR)grub/main.c
-GRUB_LD := $(LOADER_ROOT_DIR)grub/loader.ld
-
-$(GRUB_ELF): $(GRUB_LD) $(GRUB_S) $(GRUB_C)
-	$(MKDIR_P) $(LOADER_BUILD_DIR)grub
-	$(CC) -nostdlib -fms-extensions -Wno-microsoft-anon-tag -m32 -c $(GRUB_C) -o $(LOADER_BUILD_DIR)grub/main.o \
-		-I$(ROOT_DIR)include -I$(LOADER_ROOT_DIR)grub -I$(ROOT_DIR)loader/shared
-	$(CC) -nostdlib -m32 -c $(GRUB_S) -o $(LOADER_BUILD_DIR)grub/start.o
-	$(MKDIR_P) $(dir $@)
-	$(LD) -flavor ld -n -T $(GRUB_LD) $(LOADER_BUILD_DIR)grub/main.o $(LOADER_BUILD_DIR)grub/start.o -o $@
-
-$(GRUB_CFG): $(LOADER_ROOT_DIR)grub/grub.cfg
+$(GRUB_CFG): $(LOADER_ROOT_DIR)grub.cfg
 	$(MKDIR_P) $(dir $@)
 	$(CP) $^ $@
-
+$(STIVALE_CFG): $(LOADER_ROOT_DIR)limine.cfg
+	$(MKDIR_P) $(dir $@)
+	$(CP) $^ $@
 
 EFI_O := $(LOADER_BUILD_DIR)efi.o
 TINF_C := $(ROOT_DIR)loader/shared/uzlib/tinf.c
@@ -54,13 +43,23 @@ $(EFI_ELF): $(EFI_O) $(EFIZ_O) $(KERNEL_LIB) $(ENGINE_LIB)
 
 LOADER_DEPS := $(EFI_O:%.o=%.d) $(OS_OBJS:.o=.d)
 
-$(LOADER_TARGET): $(EFI_ELF) $(OS_ELF) $(GRUB_ELF) $(GRUB_CFG)
+$(LOADER_TARGET): $(EFI_ELF) $(OS_ELF) $(STIVALE_CFG) $(GRUB_CFG)
 
 LOADER_PACKAGE := $(TARGET_DIR)$(LOADER).iso
-$(LOADER_PACKAGE): build/just
-	grub-mkrescue -J -o $@ $(TARGET_DIR)$(LOADER) > /dev/null 2>&1
+LIMINE := $(CACHE_DIR)limine
+$(LIMINE):
+	git clone https://github.com/limine-bootloader/limine.git --branch=v2.0-branch-binary --depth=1 $@
+	make -C $@
+$(LOADER_PACKAGE): build/just $(LIMINE)
+	$(CP) $(LIMINE)/limine.sys $(LIMINE)/limine-cd.bin $(LIMINE)/limine-eltorito-efi.bin $(LOADER_TARGET)/boot
+	xorriso -as mkisofs -b boot/limine-cd.bin \
+		-no-emul-boot -boot-load-size 4 -boot-info-table \
+		--efi-boot boot/limine-eltorito-efi.bin \
+		-efi-boot-part --efi-boot-image --protective-msdos-label \
+		$(LOADER_TARGET) -o $@
+	$(LIMINE)/limine-install $@
 
-ifeq ($(RUN_GRUB), 1)
+ifeq ($(RUN_ISO), 1)
 $(LOADER_RUN): $(LOADER_PACKAGE)
 	$(QEMU) $(QFLAGS) -cdrom $(LOADER_PACKAGE)
 else

@@ -11,8 +11,8 @@ static K_SIGNED_HDL(vga_info) {
 
 	*(uint32_t*)_args[0] = s_lfb.width;
 	*(uint32_t*)_args[1] = s_lfb.height;
-	K__RET(int32_t, 0) = 0;
-	return NULL;
+
+	K__RES(0);
 }
 static const w_fn_sign_val vga_put_sign[] = {ST_I32, ST_I32, ST_ARR, ST_LEN, ST_I32, ST_I32};
 static K_SIGNED_HDL(vga_put) {
@@ -41,8 +41,7 @@ static K_SIGNED_HDL(vga_put) {
 		}
 	}
 
-	K__RET(int32_t, 0) = 0;
-	return NULL;
+	K__RES(0);
 }
 
 static k_signed_call_table vga_feats = {

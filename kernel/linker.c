@@ -69,30 +69,23 @@ static K_SIGNED_HDL(call_stdio_write) {
 	for (w_size i = 0; i < icnt; i++) {
 		loader_get_handle()->log(iovs[i].base, iovs[i].len);
 	}
-	K__RET(w_res, 0) = W_SUCCESS;
-	return NULL;
+	K__RES(W_SUCCESS);
 }
 static K_SIGNED_HDL(call_stdio_putc) {
 	loader_get_handle()->log(_args[0], 1);
-	K__RET(w_res, 0) = W_SUCCESS;
-	return NULL;
+	K__RES(W_SUCCESS);
 }
 static const w_fn_sign_val __sys_exec_sign[] = {ST_ARR, ST_LEN, ST_ARR, ST_LEN};
 static K_SIGNED_HDL(call_sys_exec) {
 	cstr name = _args[0];
 
-	if (strlen(name) >= K__GET(w_size, 1)) {
-		K__RET(w_res, 0) = W_EFAULT;
-		return NULL;
-	}
+	if (strlen(name) >= K__GET(w_size, 1)) K__RES(W_EFAULT);
+
 	k_pid pid = w_proc_exec(name, _args[2], K__GET(w_size, 3), k_ctx2proc(ctx));
-	if (pid == NO_PID) {
-		K__RET(w_res, 0) = W_EFAIL;
-		return NULL;
-	}
+	if (pid == NO_PID) K__RES(W_EFAIL);
+
 	w_proc_kill(pid, k_ctx2proc(ctx));
-	K__RET(w_res, 0) = W_SUCCESS;
-	return NULL;
+	K__RES(W_SUCCESS);
 }
 const k_signed_call_table* linker_get_user_table() {
 	static k_signed_call_table s_ = {

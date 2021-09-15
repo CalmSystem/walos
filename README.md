@@ -1,32 +1,32 @@
 # walos
 
-WebAssembly Language based Operating System is a toy OS using the [Language-based System](https://en.wikipedia.org/wiki/Language-based_system) approach. Unlike generalist OS, walos ignores hardware protection (Ring0, single address space). This idea simplifies the system architecture and improves performance by avoiding context switching. On the downside, the OS is not protected against CPU side-channel attacks.
+WebAssembly Language based Operating System is a toy OS using the [Language-based System](https://en.wikipedia.org/wiki/Language-based_system) approach.
 
-Processes and drivers *(services)* are [WASM](https://webassembly.org/) binary executed by design in a sandboxed environment. By avoiding hardware protection, syscalls are simple function calls triggered using interfaces like [WASI](https://wasi.dev/). So drivers can be implemented in any language targeting WebAssembly.
+Processes and drivers *(services)* are [WASM](https://webassembly.org/) binary executed by design in a sandboxed environment. So drivers can be implemented in any language targeting WebAssembly.
 
+Unlike generalist OS, walos ignores hardware protection (Ring0, single address space). This idea simplifies the system architecture and improves performance by avoiding context switching. Syscalls are simple function calls triggered using interfaces like [WASI](https://wasi.dev/). On the downside, the OS is not protected against CPU side-channel attacks.
 ## Built With
 
-* Make
-* LLVM toolchain - `clang`, `lld`, `wasm-ld`
-* QEMU - `x86_64`, `ovmf`
-* [WASM3](https://github.com/wasm3/wasm3)
-* [WASI SDK](https://github.com/WebAssembly/wasi-sdk)
+* [LLVM](https://llvm.org): `clang`, `lld`, `wasm-ld` - Make
+* [WASI SDK](https://github.com/WebAssembly/wasi-sdk) - [WASM3](https://github.com/wasm3/wasm3)
+* [QEMU](https://www.qemu.org) - [OVMF](https://www.tianocore.org)
+* [Limine](https://limine-bootloader.org)
 * Love and insomnia
 
 ## Features
 
 * WASM runtime
 * Multi loaders
-  * `os` (EFI standalone)
+  * `os` (EFI | BIOS)
   * `efi` (EFI runtime)
   * `elf` (Unix executable)
 
 ### Planned
 
-* Bios loader
 * Multitasking
 * Trim services tree
 * WASM custom section
+* Multi arch x86_64, Risk-V & Arm64
 
 ## Getting started
 
@@ -34,8 +34,8 @@ Processes and drivers *(services)* are [WASM](https://webassembly.org/) binary e
 
 OS | Needed | Optional
 --- | --- | ---
-Debian / Ubuntu | `make clang lld` | `qemu-system ovmf mtools xorriso`
-Arch / Manjaro | `make clang lld` | `qemu edk2-ovmf mtools libisoburn`
+Debian / Ubuntu | `make clang lld` | `qemu-system ovmf xorriso`
+Arch / Manjaro | `make clang lld` | `qemu edk2-ovmf libisoburn`
 
 ### Setup
 
@@ -44,17 +44,21 @@ Arch / Manjaro | `make clang lld` | `qemu edk2-ovmf mtools libisoburn`
 git clone https://github.com/CalmSystem/walos.git
 cd walos
 ```
-2. Start `ENTRY` as **ELF binary**
+2. Start `sample/shell` as **ELF binary**
 ```sh
 make run ENTRY=sample/shell LOADER=elf
 ```
-* Start `ENTRY` with **QEMU and OVMF**
+* Start `sample/exec` with **QEMU and OVMF**
 ```sh
-make run ENTRY=sample/shell
+make run ENTRY=sample/exec
 ```
-* Create a **bootable ISO** using optional prerequisites
+* Create a **bootable ISO** of `sample/hello.c`
 ```sh
 make package ENTRY=sample/hello.c
+```
+* Start `sample/vga` with **QEMU, Limine** and graphics
+```sh
+make run ENTRY=sample/vga RUN_ISO=1 RUN_VGA=1
 ```
 
 ### Known environment errors

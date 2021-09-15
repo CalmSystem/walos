@@ -5,10 +5,12 @@ SECTIONS {
 	. = 0x100000;
 	_kernel_start = .;
 	.text : ALIGN(4K) {
-		KEEP(*(.multiboot))
 		*(.text)
 	}
-	.rodata : ALIGN(4K) {
+	.stivalehdr : ALIGN(4K) {
+		KEEP(*(.stivalehdr))
+	}
+	.rodata : {
 		*(.rodata)
 	}
 	.data : ALIGN(4K) {

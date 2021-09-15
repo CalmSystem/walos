@@ -7,7 +7,7 @@ static inline void serial_putc(char c) {
 	io_write8(COM1, c);
 }
 
-static void loader_log(cstr str, size_t len) {
+void loader_log(cstr str, size_t len) {
 	for (size_t i = 0; i < len; i++)
 		serial_putc(*(str++));
 }

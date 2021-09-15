@@ -13,24 +13,6 @@ extern char _kernel_start;
 extern char _kernel_end;
 extern char _heap_start;
 
-enum EFI_MEMORY_TYPE {
-	EFI_RESERVED_MEMORY = 0x00000000,
-	EFI_LOADER_CODE = 0x00000001,
-	EFI_LOADER_DATA = 0x00000002,
-	EFI_BOOTSERVICES_CODE = 0x00000003,
-	EFI_BOOTSERVICES_DATA = 0x00000004,
-	EFI_RUNTIMESERVICES_CODE = 0x00000005,
-	EFI_RUNTIMESERVICES_DATA = 0x00000006,
-	EFI_CONVENTIONAL_MEMORY = 0x00000007,
-	EFI_UNUSABLE_MEMORY = 0x00000008,
-	EFI_ACPI_RECLAIM_MEMORY = 0x00000009,
-	EFI_ACPI_NVS_MEMORY = 0x0000000a,
-	EFI_MAPPED_IO_MEMORY = 0x0000000b,
-	EFI_MAPPED_IO_PORTSPACE_MEMORY = 0x0000000c,
-	EFI_PALCODE_MEMORY = 0x0000000d,
-	EFI_PERSISTENT_MEMORY = 0x0000000e
-};
-
 static inline void pagemap_set_n(void* addr, uint32_t n_pages, bool lock, uint32_t* from, uint32_t* to) {
 	unsigned int start = (uint64_t)addr / PAGE_SIZE;
 	for (uint32_t i = 0; i < n_pages; i++) {
@@ -65,18 +47,18 @@ void* pagemap_lock_at(void* start, uint32_t count) {
 	return NULL;
 }
 
-void memory_setup(struct efi_memory_map* m) {
+void memory_setup(struct memory_map* m) {
 
 	void* largest_segment = NULL;
 	uint32_t largest_segment_pages = 0;
 	state.free = 0;
 
-	for (int i = 0; i < m->size / m->desc_size; i++) {
-		EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((char*)m->ptr + i * m->desc_size);
-		state.free += desc->numPages;
-		if (desc->type == EFI_CONVENTIONAL_MEMORY && desc->numPages > largest_segment_pages) {
-			largest_segment = (void*)desc->physAddr;
-			largest_segment_pages = desc->numPages;
+	for (int i = 0; i < m->count; i++) {
+		struct memory_map_entry* entry = m->ptr + i;
+		state.free += entry->num_pages;
+		if (entry->type == MEMORY_MAP_CONVENSIONAL && entry->num_pages > largest_segment_pages) {
+			largest_segment = entry->base;
+			largest_segment_pages = entry->num_pages;
 		}
 	}
 
@@ -87,16 +69,10 @@ void memory_setup(struct efi_memory_map* m) {
 	uint32_t pagemap_pages = pagemap.size / BITS_PER_WORD * sizeof(bitword_t) / PAGE_SIZE + 1;
 	pagemap_lock_n(pagemap.ptr, pagemap_pages);
 
-	for (int i = 0; i < m->size / m->desc_size; i++) {
-		EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((char*)m->ptr + i * m->desc_size);
-		if (desc->type != EFI_CONVENTIONAL_MEMORY &&
-			desc->type != EFI_LOADER_CODE &&
-			desc->type != EFI_LOADER_DATA &&
-			desc->type != EFI_BOOTSERVICES_CODE &&
-			desc->type != EFI_BOOTSERVICES_DATA)
-		{
-			pagemap_reserve_n((void*)desc->physAddr, desc->numPages);
-		}
+	for (int i = 0; i < m->count; i++) {
+		struct memory_map_entry* entry = m->ptr + i;
+		if (entry->type == MEMORY_MAP_RESERVED)
+			pagemap_reserve_n(entry->base, entry->num_pages);
 	}
 
 	uint32_t kernel_pages = ((uint64_t)&_kernel_end - (uint64_t)&_kernel_start) / PAGE_SIZE + 1;

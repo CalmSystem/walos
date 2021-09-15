@@ -10,6 +10,7 @@ ENTRY_NAME := entry.wasm
 ROOT_DIR ?= $(dir $(firstword $(MAKEFILE_LIST)))
 BUILD_DIR ?= $(ROOT_DIR)build/
 TARGET_DIR ?= $(ROOT_DIR)target/
+CACHE_DIR ?= $(HOME)/.cache/
 
 CFLAGS := -MMD -MP -Wall -Werror -mno-red-zone -pedantic
 LDFLAGS := -flavor ld
