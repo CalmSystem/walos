@@ -13,7 +13,10 @@ enum w_fn_sign_type {
 	ST_ARR, /* Sized pointer aka array (len in bytes is next) */
 	ST_REFV, /* Vector of ST_PTR (len in w_ptr is next) */
 	ST_CIO, /* Vector of const sized pointers (len in w_ciovec is next) */
-	ST_BIO /* Vector of sized pointers (len in w_iovec is next) */
+	ST_BIO, /* Vector of sized pointers (len in w_iovec is next) */
+	ST_FN,  /* Function pointer */
+	ST_MIN = ST_LEN,
+	ST_MAX = ST_FN
 };
 /* Int containing enum w_fn_sign_type.
  * Packed enum are not windows abi compatible */

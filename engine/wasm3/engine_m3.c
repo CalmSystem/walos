@@ -63,7 +63,7 @@ static inline void engine_m3_read_argv(IM3Module mod, struct k_fn_decl *d, bool 
 		d->argv = (const void*)m3_ParseMemory(mod, &mem_view_size, 0, sign_val.value.i32);
 		if (d->argv && mem_view_size >= d->argc) {
 			size_t i_ck = 0;
-			while (i_ck < d->argc && (d->argv[i_ck] >= ST_LEN && d->argv[i_ck] <= ST_BIO)) i_ck++;
+			while (i_ck < d->argc && (d->argv[i_ck] >= ST_MIN && d->argv[i_ck] <= ST_MAX)) i_ck++;
 			if (i_ck < d->argc) {
 				if (log) logf(WL_WARN, "Invalid format in global signature for %s->%s:%s %s",
 					m3_GetModuleName(mod), d->mod, d->name, w_fn_sign2str(*d));

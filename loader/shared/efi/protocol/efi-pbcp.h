@@ -8,7 +8,7 @@
 #define __EFI_PBCP_H
 
 #include "../efi.h"
-
+#include "ip.h"
 
 // first definitions for PXE_BASE_CODE_PROTOCOL constants
 #define EFI_PXE_BASE_CODE_PROTOCOL_GUID {0x03C4E603, 0xAC28, 0x11d3, {0x9A, 0x2D, 0x00, 0x90, 0x27, 0x3F, 0xC1, 0x4D}}
@@ -28,24 +28,6 @@
 
 // types for the PXE_BASE_CODE_PROTOCOL
 struct EFI_PXE_BASE_CODE_PROTOCOL;
-
-typedef struct {
-    uint8_t Addr[32];
-} EFI_MAC_ADDRESS;
-
-typedef struct {
-    uint8_t Addr[4];
-} EFI_IPv4_ADDRESS;
-
-typedef struct {
-    uint8_t Addr[16];
-} EFI_IPv6_ADDRESS;
-
-typedef union {
-    uint32_t Addr[4];
-    EFI_IPv4_ADDRESS v4;
-    EFI_IPv6_ADDRESS v6;
-} EFI_IP_ADDRESS;
 
 typedef uint16_t EFI_PXE_BASE_CODE_UDP_PORT;
 
