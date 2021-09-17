@@ -51,6 +51,8 @@ typedef int32_t w_res;
 #define W_EINVAL (28)
 /** Error - Function not implemented */
 #define W_ENOSYS (52)
+/** Error - Not ready retry later */
+#define W_ENOTREADY (57)
 /** Error - Not supported */
 #define W_ENOTSUP (58)
 /** Error - Result too large */
