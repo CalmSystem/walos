@@ -50,7 +50,7 @@ static K_SIGNED_HDL(call_sys_tick) {
 	loader_get_handle()->wait();
 	return NULL;
 }
-const k_signed_call_table* linker_get_bottom_table() {
+const k_signed_call_table* linker_get_bottom_table(void) {
 	static const k_signed_call_table s_ = {
 		NULL, 2, {
 			{call_sys_log, NULL, {"sys", "log", 0, 3, __sys_log_sign}},
@@ -60,7 +60,7 @@ const k_signed_call_table* linker_get_bottom_table() {
 	return &s_;
 }
 
-const k_signed_call_table* linker_get_service_table() { return s_ctx->hw_feats; }
+const k_signed_call_table* linker_get_service_table(void) { return s_ctx->hw_feats; }
 
 static const w_fn_sign_val __stdio_write_sign[] = {ST_CIO, ST_LEN};
 static K_SIGNED_HDL(call_stdio_write) {
@@ -87,7 +87,7 @@ static K_SIGNED_HDL(call_sys_exec) {
 	w_proc_kill(pid, k_ctx2proc(ctx));
 	K__RES(W_SUCCESS);
 }
-const k_signed_call_table* linker_get_user_table() {
+const k_signed_call_table* linker_get_user_table(void) {
 	static k_signed_call_table s_ = {
 		NULL, 3, {
 			{call_stdio_write, NULL, {"stdio", "write", 1, 2, __stdio_write_sign}},

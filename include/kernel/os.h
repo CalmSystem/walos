@@ -17,7 +17,7 @@ struct loader_srv_file_t {
 /** Functions than any loader should provide */
 struct loader_handle {
 	/** Process next event */
-	void (*wait)();
+	void (*wait)(void);
 	/** Probably output log somewhere */
 	void (*log)(cstr, size_t len);
 

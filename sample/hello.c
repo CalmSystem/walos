@@ -7,7 +7,7 @@ const struct w_ciovec hello_io_vs[] = {
 const struct w_ciovec hello_log_vs[] = {
 	{"Hello ", 6}, {"log", 3}
 };
-void _start() {
+void _start(void) {
 	stdio_write(hello_io_vs, lengthof(hello_io_vs));
 	stdio_putc('!');
 	stdio_putc('\n');

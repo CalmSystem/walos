@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-static void help() {
+static void help(void) {
 	puts("usage: bin2header <filename> <array-name> [type-name]");
 }
 

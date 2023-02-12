@@ -28,10 +28,10 @@ static inline uint32_t io_read32(uint16_t port) {
 	return rega;
 }
 
-static inline void interrupt_disable() {
+static inline void interrupt_disable(void) {
 	__asm__ __volatile__("cli":::"memory");
 }
-static inline void interrupt_wait() {
+static inline void interrupt_wait(void) {
 	__asm__ __volatile__("sti; hlt; cli":::"memory");
 }
 

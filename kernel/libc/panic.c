@@ -34,7 +34,7 @@ void __attribute__((noreturn)) panic(const char *fmt, ...)
 	__builtin_trap();
 }
 
-void __attribute__((noreturn)) abort()
+void __attribute__((noreturn)) abort(void)
 {
 	__builtin_trap();
 }

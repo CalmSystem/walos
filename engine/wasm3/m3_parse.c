@@ -42,7 +42,7 @@ M3Result  ParseSection_Type  (IM3Module io_module, bytes_t i_bytes, cbytes_t i_e
     M3Result result = m3Err_none;
     IM3FuncType ftype = NULL;
 
-_try {
+_try_ {
     u32 numTypes;
 _   (ReadLEB_u32 (& numTypes, & i_bytes, i_end));                                   m3log (parse, "** Type [%d]", numTypes);
 
@@ -580,7 +580,7 @@ M3Result  m3_ParseModule  (IM3Environment i_environment, IM3Module * o_module, c
     M3Result result;                                                             m3log (parse, "load module: %d bytes", i_numBytes);
 
     IM3Module module;
-_try {
+_try_ {
     module = m3_AllocStruct (M3Module);
     _throwifnull (module);
     module->name = ".unnamed";                                                      m3log (parse, "load module: %d bytes", i_numBytes);

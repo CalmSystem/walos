@@ -143,13 +143,7 @@
 
 #define MAXBUF (sizeof(long int) * 8)		 /* enough for binary */
 
-static void
-printnum(u, base, putc, putc_arg)
-	register unsigned long	u;	/* number to print */
-	register int		base;
-	void			(*putc)();
-	char			*putc_arg;
-{
+static void printnum(register unsigned long u, register int base, void (*putc)(char *, char), char *putc_arg) {
 	char	buf[MAXBUF];	/* build number here */
 	register char *	p = &buf[MAXBUF-1];
 	static char digs[] = "0123456789abcdef";
@@ -165,13 +159,7 @@ printnum(u, base, putc, putc_arg)
 
 static unsigned char	_doprnt_truncates = FALSE;
 
-void _doprnt(fmt, args, radix, putc, putc_arg)
-	const char 	*fmt;
-	va_list		args;
-	int		radix;		/* default radix - for '%r' */
- 	void		(*putc)();	/* character output */
-	char		*putc_arg;	/* argument for putc */
-{
+void _doprnt(const char *fmt, va_list args, int radix, void (*putc)(char *, char), char *putc_arg) {
 	int		length;
 	int		prec;
 	unsigned char	ladjust;

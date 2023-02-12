@@ -373,7 +373,7 @@ static EFI_STATUS load_gop(struct linear_frame_buffer* lfb) {
 }
 
 /** Ignore stack checks (unsafe) */
-void __chkstk() {}
+void __chkstk(void) {}
 /** Hack float support */
 int32_t _fltused = 0;
 

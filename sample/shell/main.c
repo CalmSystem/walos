@@ -1,7 +1,7 @@
 #include <w/stdio.h>
 
 static const w_ciovec backspace = {"\b \b", 3};
-void _start() {
+void _start(void) {
 	char input_line[80];
 	w_size input_len = 0;
 

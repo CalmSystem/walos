@@ -367,7 +367,7 @@ static void engine_m3_free_runtime(engine_runtime *r) {
 }
 
 static engine_m3 s_m3 = {0};
-engine* engine_load() {
+engine* engine_load(void) {
 	if (!s_m3.env) {
 		s_m3.env = m3_NewEnvironment();
 		if (!s_m3.env) return NULL;

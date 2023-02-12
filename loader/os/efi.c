@@ -68,7 +68,7 @@ static inline Elf64_Addr load_kernel(char16_t* path) {
 	return header.e_entry;
 }
 
-static inline void* load_acpi() {
+static inline void* load_acpi(void) {
 	EFI_GUID v2 = EFI_ACPI_20_TABLE_GUID;
 	for (uintn_t i = 0; i < system_table->NumberOfTableEntries; i++) {
 		if (memcmp(&system_table->ConfigurationTable[i].VendorGuid, &v2, sizeof(v2)) == 0)
@@ -83,7 +83,7 @@ static inline void* load_acpi() {
 	return NULL;
 }
 
-static inline void* load_initrd() {
+static inline void* load_initrd(void) {
 	EFI_FILE_PROTOCOL *entry_file = open_file(NULL, WSTR(ENTRY_PATH));
 	if (!entry_file) goto err;
 

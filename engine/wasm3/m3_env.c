@@ -15,7 +15,7 @@
 #include "m3_info.h"
 
 
-IM3Environment  m3_NewEnvironment  ()
+IM3Environment  m3_NewEnvironment  (void)
 {
     M3Result result = m3Err_none;
 
@@ -23,7 +23,7 @@ IM3Environment  m3_NewEnvironment  ()
 
     if (env)
     {
-        _try
+        _try_
         {
             // create FuncTypes for all simple block return ValueTypes
             for (u8 t = c_m3Type_none; t <= c_m3Type_f64; t++)
@@ -842,7 +842,7 @@ M3Result  m3_CallV  (IM3Function i_function, ...)
 }
 
 static
-void  ReportNativeStackUsage  ()
+void  ReportNativeStackUsage  (void)
 {
 #   if d_m3LogNativeStack
         int stackUsed =  m3StackGetMax();

@@ -31,7 +31,7 @@ M3Result  SignatureToFuncType  (IM3FuncType * o_functionType, ccstr_t i_signatur
 
     IM3FuncType funcType = NULL;
 
-_try {
+_try_ {
     if (not o_functionType)
         _throw ("null function type");
 
@@ -127,7 +127,7 @@ M3Result  LinkRawFunction  (IM3Module io_module,  IM3Function io_function, ccstr
 {
     M3Result result = m3Err_none;                                                 d_m3Assert (io_module->runtime);
 
-_try {
+_try_ {
     if (signature) {
 _       (ValidateSignature (io_function, signature));
     }

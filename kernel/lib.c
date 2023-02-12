@@ -8,7 +8,7 @@
 #define ENTRY_NAME "entry.wasm"
 
 static const struct loader_handle* s_loader_hdl;
-const struct loader_handle *loader_get_handle() { return s_loader_hdl; }
+const struct loader_handle *loader_get_handle(void) { return s_loader_hdl; }
 
 static engine* s_engine;
 
@@ -21,7 +21,7 @@ struct processes_table {
 static struct processes_table* s_procs = NULL;
 #define PROC_TAB_SIZE ((PAGE_SIZE - offsetof(struct processes_table, base)) / sizeof(struct process))
 
-static struct process* service_read_next();
+static struct process* service_read_next(void);
 
 void os_entry(const struct loader_ctx_t* ctx) {
 	s_loader_hdl = &ctx->handle;
@@ -59,7 +59,7 @@ void os_entry(const struct loader_ctx_t* ctx) {
 static inline bool is_process_present(const struct process* p) {
 	return p && p->e_ctx.linker == linker_link_proc;
 }
-static struct process* proc_alloc() {
+static struct process* proc_alloc(void) {
 	struct process* p = NULL;
 	{
 		struct processes_table** pt = &s_procs;
@@ -97,7 +97,7 @@ static void proc_unload(struct process* p) {
 	p->imports = NULL;
 }
 
-static struct process* service_read_next() {
+static struct process* service_read_next(void) {
 	static size_t s_offset = 0;
 	struct loader_srv_file_t file;
 	if (!loader_get_handle()->srv_list(&file, 1, s_offset))

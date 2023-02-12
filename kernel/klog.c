@@ -15,7 +15,7 @@ void klogs(enum w_log_level lvl, cstr ctx, cstr str) {
 	klog_suffix(log, str[len] != '\n');
 }
 
-static void savechar(char *arg, int c) {
+static void savechar(char *arg, char c) {
 	static char buf[32];
 	static size_t buf_size = 0;
 	if (buf_size && (!c || buf_size >= sizeof(buf))) {
@@ -29,7 +29,7 @@ void klogf(enum w_log_level lvl, cstr ctx, cstr fmt, ...) {
 
 	klog_prefix(log, lvl, ctx);
 	va_start(args, fmt);
-	_doprnt(fmt, args, 0, (void (*)())savechar, NULL);
+	_doprnt(fmt, args, 0, savechar, NULL);
 	va_end(args);
 	savechar(NULL, 0);
 	klog_suffix(log, true);

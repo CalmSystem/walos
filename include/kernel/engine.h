@@ -51,6 +51,6 @@ typedef struct engine {
 } engine;
 
 /** Setup and return self */
-engine* engine_load();
+engine* engine_load(void);
 
 #endif

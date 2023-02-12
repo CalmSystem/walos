@@ -17,7 +17,7 @@ typedef struct {
   uint8_t pixeltype;          // must be 40
 } __attribute__((packed)) tga_header_t;
 
-void _start() {
+void _start(void) {
 	const tga_header_t* h = (void*)_binary_wasm_tga;
 	if (h-> magic1 != 0 || h-> colormap != 0 || h-> encoding != 2 || h-> cmaporig != 0 || h-> cmaplen != 0 ||
 		h-> cmapent != 0 || h-> x != 0 || h-> bpp != 32 || h-> pixeltype != 40) return;

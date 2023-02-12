@@ -74,11 +74,7 @@ flush(struct printf_state *state)
 	state->index = 0;
 }
 
-static void
-printf_char(arg, c)
-	char *arg;
-	int c;
-{
+static void printf_char(char* arg, char c) {
 	struct printf_state *state = (struct printf_state *) arg;
 
 	if ((c == 0) || (c == '\n') || (state->index >= PRINTF_BUFMAX))
@@ -102,7 +98,7 @@ int vprintf(const char *fmt, va_list args)
 	struct printf_state state;
 
 	state.index = 0;
-	_doprnt(fmt, args, 0, (void (*)())printf_char, (char *) &state);
+	_doprnt(fmt, args, 0, printf_char, (char *) &state);
 
 	if (state.index != 0)
 		flush(&state);

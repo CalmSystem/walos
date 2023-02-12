@@ -10,6 +10,6 @@ void acpi_shutdown(void *rsdp) {
 	while(1);
 }
 
-static void loader_wait() {
+static void loader_wait(void) {
 	interrupt_wait();
 }

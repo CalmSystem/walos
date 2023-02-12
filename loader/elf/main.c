@@ -15,7 +15,7 @@ static inline void llog_out(cstr str, unsigned len) {
 static void loader_log(cstr str, size_t len) {
 	fwrite(str, len, 1, stdout);
 }
-static void loader_wait() {
+static void loader_wait(void) {
 	//TODO: wait for event
 	sleep(1); /* Sleep for now */
 }
@@ -95,7 +95,7 @@ static void loader_free(page_t* first, size_t n_pages) {
 }
 
 static struct termios s_old_tio = {0};
-static inline void hw_key_restore() {
+static inline void hw_key_restore(void) {
 	if (s_old_tio.c_lflag) {
 		tcsetattr(STDIN_FILENO, TCSANOW, &s_old_tio);
 	}

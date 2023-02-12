@@ -64,6 +64,6 @@ void  m3_PrintProfilerInfo  ()
 
 # else
 
-void  m3_PrintProfilerInfo  () {}
+void  m3_PrintProfilerInfo  (void) {}
 
 # endif

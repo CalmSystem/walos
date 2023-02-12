@@ -1,5 +1,4 @@
 #include <efi/efi-tools.h>
-#include <efi/protocol/efi-snp.h>
 #include <kernel/os.h>
 static inline int memcpy(void* aptr, const void* bptr, size_t n){
 	char* a = aptr;
@@ -11,10 +10,10 @@ static inline int memcpy(void* aptr, const void* bptr, size_t n){
 
 #define SRV_PATH "entry"
 
-static inline void push_watchdog_timer() {
+static inline void push_watchdog_timer(void) {
 	system_table->BootServices->SetWatchdogTimer(60, 0, 13, L"OS timed out");
 }
-static void wait() {
+static void wait(void) {
 	push_watchdog_timer(); /* Expand for a minute */
 	//TODO: wait for event
 	system_table->BootServices->Stall(1000); /* Sleep for now */

@@ -1109,7 +1109,7 @@ M3Result  Compile_ExtendedOpcode  (IM3Compilation o, m3opcode_t i_opcode)
 {
     M3Result result = m3Err_none;
 
-_try {
+_try_ {
     u8 opcode;
 _   (Read_u8 (& opcode, & o->wasm, o->wasmEnd));             m3log (compile, d_indent " (FC: %" PRIi32 ")", get_indention_string (o), opcode);
 
@@ -1227,7 +1227,7 @@ M3Result  Compile_GetLocal  (IM3Compilation o, m3opcode_t i_opcode)
 {
     M3Result result;
 
-_try {
+_try_ {
 
     u32 localIndex;
 _   (ReadLEB_u32 (& localIndex, & o->wasm, o->wasmEnd));
@@ -1439,7 +1439,7 @@ M3Result  Compile_BranchTable  (IM3Compilation o, m3opcode_t i_opcode)
 {
     M3Result result;
 
-_try {
+_try_ {
     u32 targetCount;
 _   (ReadLEB_u32 (& targetCount, & o->wasm, o->wasmEnd));
 
@@ -1522,7 +1522,7 @@ M3Result  CompileCallArgsAndReturn  (IM3Compilation o, u16 * o_stackOffset, IM3F
 {
     M3Result result = m3Err_none;
 
-_try {
+_try_ {
 
     u16 topSlot = GetMaxUsedSlotPlusOne (o);
 
@@ -1570,7 +1570,7 @@ M3Result  Compile_Call  (IM3Compilation o, m3opcode_t i_opcode)
 {
     M3Result result;
 
-_try {
+_try_ {
     u32 functionIndex;
 _   (ReadLEB_u32 (& functionIndex, & o->wasm, o->wasmEnd));
 
@@ -1618,7 +1618,7 @@ M3Result  Compile_CallIndirect  (IM3Compilation o, m3opcode_t i_opcode)
 {
     M3Result result;
 
-_try {
+_try_ {
     u32 typeIndex;
 _   (ReadLEB_u32 (& typeIndex, & o->wasm, o->wasmEnd));
 
@@ -1818,7 +1818,7 @@ M3Result  CompileElseBlock  (IM3Compilation o, pc_t * o_startPC, IM3FuncType i_b
 {
     M3Result result;
 
-_try {
+_try_ {
 
     IM3CodePage elsePage;
 _   (AcquireCompilationCodePage (o, & elsePage));
@@ -1852,7 +1852,7 @@ M3Result  Compile_If  (IM3Compilation o, m3opcode_t i_opcode)
             [ ..block.. ]           [ op_Branch ]
             [    end    ]  <-----   [  <end-pc> ]       */
 
-_try {
+_try_ {
 
 _   (PreserveNonTopRegisters (o));
 _   (PreserveArgsAndLocals (o));
@@ -2096,7 +2096,7 @@ M3Result  Compile_Convert  (IM3Compilation o, m3opcode_t i_opcode)
 {
     M3Result result = m3Err_none;
 
-_try {
+_try_ {
     IM3OpInfo opInfo = GetOpInfo (i_opcode);
     _throwif (m3Err_unknownOpcode, not opInfo);
 
@@ -2122,7 +2122,7 @@ M3Result  Compile_Load_Store  (IM3Compilation o, m3opcode_t i_opcode)
 {
     M3Result result;
 
-_try {
+_try_ {
     u32 alignHint, memoryOffset;
 
 _   (ReadLEB_u32 (& alignHint, & o->wasm, o->wasmEnd));
@@ -2577,7 +2577,7 @@ M3Result  CompileBlock  (IM3Compilation o, IM3FuncType i_blockType, m3opcode_t i
                         <----- exitStackIndex
     */
 
-_try {
+_try_ {
     // validate and dealloc params ----------------------------
 
     u16 stackIndex = o->stackIndex;
@@ -2739,7 +2739,7 @@ M3Result  CompileFunction  (IM3Function io_function)
     o->wasmEnd  = io_function->wasmEnd;
     o->block.type = funcType;
 
-_try {
+_try_ {
     // skip over code size. the end was already calculated during parse phase
     u32 size;
 _   (ReadLEB_u32 (& size, & o->wasm, o->wasmEnd));                  d_m3Assert (size == (o->wasmEnd - o->wasm))

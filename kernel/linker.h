@@ -10,8 +10,8 @@ const k_signed_call_table* linker_bind_table(
 	bool (*ef_fn)(void* ef_arg, k_signed_call*));
 
 /** Table with minimal rights (log and wait) */
-const k_signed_call_table* linker_get_bottom_table();
+const k_signed_call_table* linker_get_bottom_table(void);
 /** Table with hardware access */
-const k_signed_call_table* linker_get_service_table();
+const k_signed_call_table* linker_get_service_table(void);
 /** Table with loader drivers */
-const k_signed_call_table* linker_get_user_table();
+const k_signed_call_table* linker_get_user_table(void);

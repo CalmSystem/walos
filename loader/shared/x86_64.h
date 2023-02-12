@@ -10,7 +10,7 @@ static inline bool cpuid_has_feat(uint8_t idx, bool edx) {
 	return cpuid_get(1, enx) && (enx[edx ? 3 : 2] & (1ul << idx));
 }
 static char simd_fxsave_region[512] __attribute__((aligned(16)));
-static inline void x86_64_enable_feats() {
+static inline void x86_64_enable_feats(void) {
 	// SSE2 is required for long mode compatible CPU
 	// if (!cpuid_has_feat(25, true)) return;
 	uint64_t cr0, cr4;

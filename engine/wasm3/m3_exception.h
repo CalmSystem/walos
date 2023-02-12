@@ -23,7 +23,7 @@ void ExceptionBreakpoint (cstr_t i_exception, cstr_t i_message);
 # endif
 
 
-#define _try
+#define _try_
 #define _(TRY)                            { result = TRY; if (result) { EXCEPTION_PRINT (result); goto _catch; } }
 #define _throw(ERROR)                     { result = ERROR; EXCEPTION_PRINT (result); goto _catch; }
 #define _throwif(ERROR, COND)             if (UNLIKELY(COND)) \
